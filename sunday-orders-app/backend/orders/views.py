@@ -1,0 +1,350 @@
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.db.models import Sum, Q
+from django.utils import timezone
+from datetime import datetime, timedelta
+from .models import Customer, Product, WeeklyOrder, OrderItem, Debt, SalesEntry, Giveaway, Expense
+from .serializers import (
+    CustomerSerializer, ProductSerializer, WeeklyOrderSerializer,
+    WeeklyOrderCreateSerializer, DebtSerializer, DebtPaymentSerializer,
+    SalesEntrySerializer, SalesEntryCreateSerializer, BulkSalesEntrySerializer,
+    GiveawaySerializer, ExpenseSerializer
+)
+
+
+class CustomerViewSet(viewsets.ModelViewSet):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+
+    @action(detail=True, methods=['get'])
+    def debts(self, request, pk=None):
+        customer = self.get_object()
+        debts = customer.debts.filter(status__in=['outstanding', 'partial'])
+        serializer = DebtSerializer(debts, many=True)
+        return Response(serializer.data)
+
+
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.filter(is_active=True)
+    serializer_class = ProductSerializer
+
+
+class WeeklyOrderViewSet(viewsets.ModelViewSet):
+    queryset = WeeklyOrder.objects.all()
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return WeeklyOrderCreateSerializer
+        return WeeklyOrderSerializer
+
+    @action(detail=False, methods=['get'])
+    def current_week(self, request):
+        # Get the most recent Sunday
+        today = timezone.now().date()
+        days_since_sunday = today.weekday() + 1 if today.weekday() != 6 else 0
+        last_sunday = today - timedelta(days=days_since_sunday)
+
+        try:
+            order = WeeklyOrder.objects.get(date=last_sunday)
+            serializer = self.get_serializer(order)
+            return Response(serializer.data)
+        except WeeklyOrder.DoesNotExist:
+            return Response({'detail': 'No order found for current week'},
+                          status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=['post'])
+    def copy_from_previous(self, request):
+        date_str = request.data.get('date')
+        if not date_str:
+            return Response({'error': 'Date is required'},
+                          status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            new_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD'},
+                          status=status.HTTP_400_BAD_REQUEST)
+
+        # Find the most recent order before the new date
+        previous_order = WeeklyOrder.objects.filter(
+            date__lt=new_date
+        ).order_by('-date').first()
+
+        if not previous_order:
+            return Response({'error': 'No previous order found'},
+                          status=status.HTTP_404_NOT_FOUND)
+
+        # Create new order with same items
+        new_order = WeeklyOrder.objects.create(
+            date=new_date,
+            notes=f"Copied from {previous_order.date}"
+        )
+
+        for item in previous_order.items.all():
+            OrderItem.objects.create(
+                order=new_order,
+                product=item.product,
+                quantity=item.quantity,
+                cost_price=item.cost_price,
+                sell_price=item.sell_price
+            )
+
+        serializer = self.get_serializer(new_order)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def enter_sales(self, request, pk=None):
+        """Enter sales data for a weekly order"""
+        order = self.get_object()
+        serializer = BulkSalesEntrySerializer(data=request.data)
+
+        if serializer.is_valid():
+            sales_entries = serializer.validated_data['sales_entries']
+            created_entries = []
+
+            for entry_data in sales_entries:
+                # Check if sales entry already exists
+                sales_entry, created = SalesEntry.objects.get_or_create(
+                    order_item=entry_data['order_item'],
+                    defaults={
+                        'quantity_sold': entry_data['quantity_sold'],
+                        'actual_sell_price': entry_data['actual_sell_price'],
+                        'notes': entry_data['notes']
+                    }
+                )
+
+                if not created:
+                    # Update existing entry
+                    sales_entry.quantity_sold = entry_data['quantity_sold']
+                    sales_entry.actual_sell_price = entry_data['actual_sell_price']
+                    sales_entry.notes = entry_data['notes']
+                    sales_entry.save()
+
+                created_entries.append(sales_entry)
+
+            # Return updated order with sales data
+            order_serializer = self.get_serializer(order)
+            return Response(order_serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'])
+    def sales_summary(self, request, pk=None):
+        """Get sales summary for a weekly order"""
+        order = self.get_object()
+
+        summary = {
+            'order_date': order.date,
+            'planned_revenue': order.total_revenue,
+            'planned_cost': order.total_cost,
+            'planned_profit': order.total_profit,
+            'actual_revenue': order.actual_total_revenue,
+            'actual_cost': order.actual_total_cost,
+            'actual_profit': order.actual_total_profit,
+            'has_sales_data': order.has_sales_data,
+            'completion_percentage': order.sales_completion_percentage,
+            'variance': {
+                'revenue': order.actual_total_revenue - order.total_revenue,
+                'cost': order.actual_total_cost - order.total_cost,
+                'profit': order.actual_total_profit - order.total_profit,
+            }
+        }
+
+        return Response(summary)
+
+
+class SalesEntryViewSet(viewsets.ModelViewSet):
+    queryset = SalesEntry.objects.all()
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return SalesEntryCreateSerializer
+        return SalesEntrySerializer
+
+    def get_queryset(self):
+        queryset = SalesEntry.objects.all()
+        order_id = self.request.query_params.get('order', None)
+
+        if order_id:
+            queryset = queryset.filter(order_item__order_id=order_id)
+
+        return queryset
+
+
+class DebtViewSet(viewsets.ModelViewSet):
+    queryset = Debt.objects.all()
+    serializer_class = DebtSerializer
+
+    def get_queryset(self):
+        queryset = Debt.objects.all()
+        status_filter = self.request.query_params.get('status', None)
+        customer_id = self.request.query_params.get('customer', None)
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if customer_id:
+            queryset = queryset.filter(customer_id=customer_id)
+
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def outstanding(self, request):
+        debts = Debt.objects.filter(status__in=['outstanding', 'partial'])
+        serializer = self.get_serializer(debts, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def make_payment(self, request, pk=None):
+        debt = self.get_object()
+        serializer = DebtPaymentSerializer(data=request.data)
+
+        if serializer.is_valid():
+            amount_paid = serializer.validated_data['amount_paid']
+            payment_date = serializer.validated_data['payment_date']
+            notes = serializer.validated_data.get('notes', '')
+
+            # Update debt
+            debt.amount_paid += amount_paid
+            debt.date_paid = payment_date
+            if notes:
+                debt.notes = f"{debt.notes}\n{payment_date}: Payment of ₦{amount_paid} - {notes}".strip()
+            debt.save()
+
+            return Response(DebtSerializer(debt).data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        total_outstanding = Debt.objects.filter(
+            status__in=['outstanding', 'partial']
+        ).aggregate(
+            total=Sum('amount') - Sum('amount_paid')
+        )['total'] or 0
+
+        total_customers_with_debt = Debt.objects.filter(
+            status__in=['outstanding', 'partial']
+        ).values('customer').distinct().count()
+
+        return Response({
+            'total_outstanding': total_outstanding,
+            'customers_with_debt': total_customers_with_debt
+        })
+
+
+class DashboardViewSet(viewsets.ViewSet):
+    """
+    Dashboard statistics and summary data
+    """
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        # Get current week stats
+        today = timezone.now().date()
+        days_since_sunday = today.weekday() + 1 if today.weekday() != 6 else 0
+        current_sunday = today - timedelta(days=days_since_sunday)
+        last_sunday = current_sunday - timedelta(days=7)
+
+        current_week_order = WeeklyOrder.objects.filter(date=current_sunday).first()
+        last_week_order = WeeklyOrder.objects.filter(date=last_sunday).first()
+
+        # Calculate stats
+        current_week_revenue = current_week_order.total_revenue if current_week_order else 0
+        current_week_profit = current_week_order.total_profit if current_week_order else 0
+        last_week_revenue = last_week_order.total_revenue if last_week_order else 0
+
+        # Outstanding debts
+        total_debt = Debt.objects.filter(
+            status__in=['outstanding', 'partial']
+        ).aggregate(
+            total=Sum('amount') - Sum('amount_paid')
+        )['total'] or 0
+
+        # Top selling items (last 4 weeks)
+        four_weeks_ago = current_sunday - timedelta(days=28)
+        top_items = OrderItem.objects.filter(
+            order__date__gte=four_weeks_ago
+        ).values('product__name').annotate(
+            total_quantity=Sum('quantity'),
+            total_profit=Sum('quantity') * (Sum('sell_price') - Sum('cost_price'))
+        ).order_by('-total_quantity')[:5]
+
+        return Response({
+            'current_week': {
+                'revenue': current_week_revenue,
+                'profit': current_week_profit,
+                'date': current_sunday
+            },
+            'last_week': {
+                'revenue': last_week_revenue,
+                'date': last_sunday
+            },
+            'total_outstanding_debt': total_debt,
+            'top_items': list(top_items)
+        })
+
+
+class GiveawayViewSet(viewsets.ModelViewSet):
+    queryset = Giveaway.objects.all()
+    serializer_class = GiveawaySerializer
+
+    def get_queryset(self):
+        queryset = Giveaway.objects.all()
+        order_id = self.request.query_params.get('order', None)
+        recipient = self.request.query_params.get('recipient', None)
+
+        if order_id:
+            queryset = queryset.filter(order_id=order_id)
+        if recipient:
+            queryset = queryset.filter(recipient__icontains=recipient)
+
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def by_order(self, request):
+        """Get giveaways grouped by order"""
+        order_id = request.query_params.get('order')
+        if not order_id:
+            return Response({'error': 'Order ID is required'},
+                          status=status.HTTP_400_BAD_REQUEST)
+
+        giveaways = Giveaway.objects.filter(order_id=order_id)
+        serializer = self.get_serializer(giveaways, many=True)
+        return Response(serializer.data)
+
+
+class ExpenseViewSet(viewsets.ModelViewSet):
+    queryset = Expense.objects.all()
+    serializer_class = ExpenseSerializer
+
+    def get_queryset(self):
+        queryset = Expense.objects.all()
+        order_id = self.request.query_params.get('order', None)
+        category = self.request.query_params.get('category', None)
+
+        if order_id:
+            queryset = queryset.filter(order_id=order_id)
+        if category:
+            queryset = queryset.filter(category=category)
+
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def by_order(self, request):
+        """Get expenses grouped by order"""
+        order_id = request.query_params.get('order')
+        if not order_id:
+            return Response({'error': 'Order ID is required'},
+                          status=status.HTTP_400_BAD_REQUEST)
+
+        expenses = Expense.objects.filter(order_id=order_id)
+        serializer = self.get_serializer(expenses, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def categories(self, request):
+        """Get available expense categories"""
+        categories = [{'value': choice[0], 'label': choice[1]}
+                     for choice in Expense.EXPENSE_CATEGORIES]
+        return Response(categories)

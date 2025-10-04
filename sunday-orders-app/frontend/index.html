@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunday Orders Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1><i class="fas fa-calendar-week"></i> Sunday Orders</h1>
+            </div>
+            <div class="nav-links">
+                <button class="nav-btn active" data-page="dashboard">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </button>
+                <button class="nav-btn" data-page="orders">
+                    <i class="fas fa-calendar-alt"></i> Weekly Orders
+                </button>
+                <button class="nav-btn" data-page="products">
+                    <i class="fas fa-box"></i> Products
+                </button>
+                <button class="nav-btn" data-page="customers">
+                    <i class="fas fa-users"></i> Customers
+                </button>
+                <button class="nav-btn" data-page="debts">
+                    <i class="fas fa-money-bill-wave"></i> Debts
+                </button>
+                <button class="nav-btn" data-page="tracking">
+                    <i class="fas fa-clipboard-list"></i> Tracking
+                </button>
+                <button class="nav-btn" data-page="reports">
+                    <i class="fas fa-chart-bar"></i> Reports
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div id="dashboard-page" class="page active">
+                <div class="page-header">
+                    <h2>Dashboard Overview</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="refreshDashboard()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="current-week-revenue">₦0</h3>
+                            <p>This Week Revenue</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="current-week-profit">₦0</h3>
+                            <p>This Week Profit</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="total-debt">₦0</h3>
+                            <p>Outstanding Debts</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="total-customers">0</h3>
+                            <p>Total Customers</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Recent Orders</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="recent-orders-list">
+                                <div class="loading">Loading recent orders...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Outstanding Debts</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="outstanding-debts-list">
+                                <div class="loading">Loading debts...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Orders Page -->
+            <div id="orders-page" class="page">
+                <div class="page-header">
+                    <h2>Weekly Orders</h2>
+                    <div class="header-actions">
+                        <select id="orders-filter" onchange="filterOrders()">
+                            <option value="all">All Orders</option>
+                            <option value="with-sales">With Sales Data</option>
+                            <option value="without-sales">Without Sales Data</option>
+                            <option value="complete">100% Complete</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="showOrderForm()">
+                            <i class="fas fa-plus"></i> New Order
+                        </button>
+                        <button class="btn btn-outline" onclick="copyFromPrevious()">
+                            <i class="fas fa-copy"></i> Copy Previous
+                        </button>
+                    </div>
+                </div>
+
+                <div class="orders-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Order Calendar</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="orders-calendar">
+                                <div class="loading">Loading orders...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Page -->
+            <div id="products-page" class="page">
+                <div class="page-header">
+                    <h2>Product Management</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showProductForm()">
+                            <i class="fas fa-plus"></i> Add Product
+                        </button>
+                    </div>
+                </div>
+
+                <div class="products-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Product List</h3>
+                            <div class="search-box">
+                                <input type="text" id="product-search" placeholder="Search products...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="products-list">
+                                <div class="loading">Loading products...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customers Page -->
+            <div id="customers-page" class="page">
+                <div class="page-header">
+                    <h2>Customer Management</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showCustomerForm()">
+                            <i class="fas fa-user-plus"></i> Add Customer
+                        </button>
+                    </div>
+                </div>
+
+                <div class="customers-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Customer List</h3>
+                            <div class="search-box">
+                                <input type="text" id="customer-search" placeholder="Search customers...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="customers-list">
+                                <div class="loading">Loading customers...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debts Page -->
+            <div id="debts-page" class="page">
+                <div class="page-header">
+                    <h2>Debt Management</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showDebtForm()">
+                            <i class="fas fa-plus"></i> Add Debt
+                        </button>
+                        <select id="debt-filter" onchange="filterDebts()">
+                            <option value="all">All Debts</option>
+                            <option value="outstanding">Outstanding</option>
+                            <option value="partial">Partial</option>
+                            <option value="paid">Paid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="debts-content">
+                    <div class="card">
+                        <div class="card-body">
+                            <div id="debts-list">
+                                <div class="loading">Loading debts...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tracking Page -->
+            <div id="tracking-page" class="page">
+                <div class="page-header">
+                    <h2>Giveaways & Expenses Tracking</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showGiveawayForm()">
+                            <i class="fas fa-gift"></i> Add Giveaway
+                        </button>
+                        <button class="btn btn-secondary" onclick="showExpenseForm()">
+                            <i class="fas fa-receipt"></i> Add Expense
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tracking-content">
+                    <div class="tracking-tabs">
+                        <button class="tab-btn active" onclick="switchTrackingTab('giveaways')">
+                            <i class="fas fa-gift"></i> Giveaways
+                        </button>
+                        <button class="tab-btn" onclick="switchTrackingTab('expenses')">
+                            <i class="fas fa-receipt"></i> Expenses
+                        </button>
+                    </div>
+
+                    <!-- Giveaways Tab -->
+                    <div id="giveaways-tab" class="tab-content active">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Free Giveaways</h3>
+                                <div class="search-box">
+                                    <input type="text" id="giveaway-search" placeholder="Search giveaways...">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="giveaways-list">
+                                    <div class="loading">Loading giveaways...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expenses Tab -->
+                    <div id="expenses-tab" class="tab-content">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Operational Expenses</h3>
+                                <div class="search-box">
+                                    <input type="text" id="expense-search" placeholder="Search expenses...">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="expenses-list">
+                                    <div class="loading">Loading expenses...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Page -->
+            <div id="reports-page" class="page">
+                <div class="page-header">
+                    <h2>Reports & Analytics</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-outline" onclick="exportReports()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+
+                <div class="reports-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Weekly Performance</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="weekly-chart">
+                                <div class="loading">Loading chart...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Modal Title</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Modal content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="loading-spinner">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

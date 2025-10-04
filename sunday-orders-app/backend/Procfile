@@ -1,0 +1,1 @@
+web: gunicorn sunday_orders_backend.wsgi --log-file -

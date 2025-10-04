@@ -1,0 +1,14 @@
+{
+  "name": "sunday-orders-frontend",
+  "version": "1.0.0",
+  "description": "Sunday Orders Dashboard Frontend",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 3000",
+    "build": "echo 'No build step required for static HTML'",
+    "start": "python -m http.server 3000"
+  },
+  "keywords": ["dashboard", "orders", "bakery", "management"],
+  "author": "Sunday Orders Team",
+  "license": "MIT"
+}
