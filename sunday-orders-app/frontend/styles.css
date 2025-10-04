@@ -366,9 +366,9 @@ body {
 .modal {
     background: white;
     border-radius: 12px;
-    max-width: 600px;
-    width: 90%;
-    max-height: 80vh;
+    max-width: 900px;
+    width: 95%;
+    max-height: 90vh;
     overflow-y: auto;
 }
 
@@ -770,6 +770,223 @@ body {
 /* Order Detail Modal */
 .order-detail-modal {
     max-width: 100%;
+}
+
+.order-detail-content {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Financial Summary Section */
+.financial-summary-section {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    border: 1px solid #e2e8f0;
+}
+
+.financial-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-card.revenue {
+    border-left-color: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.summary-card.payments {
+    border-left-color: #48bb78;
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+}
+
+.summary-card.debt {
+    border-left-color: #f56565;
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    color: white;
+}
+
+.summary-card.costs {
+    border-left-color: #f6ad55;
+    background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+    color: white;
+}
+
+.summary-card.profit {
+    border-left-color: #38b2ac;
+    background: linear-gradient(135deg, #38b2ac 0%, #319795 100%);
+    color: white;
+}
+
+.summary-card h5 {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.summary-card .amount {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.summary-card .payment-breakdown,
+.summary-card .cost-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.summary-card .payment-breakdown small,
+.summary-card .cost-breakdown small {
+    opacity: 0.8;
+    font-size: 0.8rem;
+}
+
+.debt-amount {
+    color: white !important;
+}
+
+.profit-amount {
+    color: white !important;
+}
+
+/* Payment Tracking Form */
+.payment-tracking-form {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.payment-tracking-form h5 {
+    margin-bottom: 1rem;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.payment-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.payment-inputs .input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.payment-inputs label {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.payment-inputs input {
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.payment-inputs input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Giveaways, Expenses, and Debts Sections */
+.giveaways-section,
+.expenses-section,
+.debts-section {
+    margin-bottom: 2rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.giveaways-section .section-header,
+.expenses-section .section-header,
+.debts-section .section-header {
+    background: #f8fafc;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.giveaways-section .section-header h4,
+.expenses-section .section-header h4,
+.debts-section .section-header h4 {
+    margin: 0;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.giveaways-table,
+.expenses-table,
+.debts-table {
+    overflow-x: auto;
+}
+
+.giveaways-table table,
+.expenses-table table,
+.debts-table table {
+    margin: 0;
+}
+
+.giveaways-table tbody tr:hover,
+.expenses-table tbody tr:hover,
+.debts-table tbody tr:hover {
+    background: #f7fafc;
+}
+
+.category-badge {
+    background: #667eea;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-badge.outstanding {
+    background: #fed7d7;
+    color: #c53030;
+}
+
+.status-badge.partial {
+    background: #feebc8;
+    color: #dd6b20;
+}
+
+.status-badge.paid {
+    background: #c6f6d5;
+    color: #2f855a;
+}
+
+/* Section Headers with Icons */
+.section-header h4 i {
+    color: #667eea;
 }
 
 .order-header {

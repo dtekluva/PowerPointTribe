@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Enhanced Modal</title>
+    <link rel="stylesheet" href="styles.css?v=2.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Test Enhanced Order Detail Modal</h1>
+        <button onclick="testModal()" class="btn btn-primary">Test Enhanced Modal</button>
+
+        <div id="modal-overlay" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Test Modal</h3>
+                    <button class="modal-close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- Modal content will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=2.1"></script>
+    <script>
+        // Test data that matches the API response structure
+        const testOrder = {
+            id: 78,
+            date: "2025-08-03",
+            notes: "Test order",
+            cash_received: "8000.00",
+            transfer_received: "2000.00",
+            total_payments_received: 10000.0,
+            total_debt: 800.0,
+            effective_sales_revenue: 10800.0,
+            total_giveaway_cost: 1500.0,
+            total_expenses: 2500.0,
+            has_sales_data: true,
+            sales_completion_percentage: 11.11,
+            giveaways: [
+                {
+                    id: 3,
+                    product_name: "Sugar Donuts",
+                    quantity: 3,
+                    recipient: "Pastor",
+                    cost_price: "500.00",
+                    total_cost: 1500.0,
+                    date_given: "2025-08-03",
+                    notes: "Sunday service appreciation"
+                }
+            ],
+            expenses: [
+                {
+                    id: 3,
+                    category: "transportation",
+                    category_display: "Transportation",
+                    amount: "2500.00",
+                    description: "Delivery transportation costs",
+                    date: "2025-08-03",
+                    notes: "Fuel and driver payment"
+                }
+            ],
+            items: [
+                {
+                    id: 647,
+                    product_name: "Sugar Donuts",
+                    quantity: 25,
+                    cost_price: "500.00",
+                    sell_price: "600.00",
+                    total_cost: 12500.0,
+                    total_revenue: 15000.0,
+                    sales: {
+                        quantity_sold: 18,
+                        actual_sell_price: "600.00",
+                        total_revenue: 10800.0
+                    },
+                    has_sales: true
+                }
+            ]
+        };
+
+        function testModal() {
+            console.log('Testing enhanced modal with data:', testOrder);
+            showOrderDetailModal(testOrder);
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        // Override the showModal function to use our test modal
+        const originalShowModal = showModal;
+        window.showModal = function(title, content) {
+            document.getElementById('modal-body').innerHTML = content;
+            document.getElementById('modal-overlay').style.display = 'flex';
+        };
+    </script>
+</body>
+</html>

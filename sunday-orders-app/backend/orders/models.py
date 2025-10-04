@@ -48,6 +48,18 @@ class Product(models.Model):
 class WeeklyOrder(models.Model):
     date = models.DateField()  # Sunday date
     notes = models.TextField(blank=True)
+    cash_received = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
+    transfer_received = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -121,6 +133,28 @@ class WeeklyOrder(models.Model):
         """Calculate planned net profit after deducting estimated giveaways and expenses"""
         return self.total_profit - self.total_giveaway_cost - self.total_expenses
 
+    @property
+    def total_payments_received(self):
+        """Calculate total payments received (cash + transfer)"""
+        return self.cash_received + self.transfer_received
+
+    @property
+    def total_debt(self):
+        """Calculate total debt - sum of actual debt records or calculated debt"""
+        # First, try to get sum of actual debt records associated with this order
+        actual_debts = self.debts.filter(status__in=['outstanding', 'partial'])
+        if actual_debts.exists():
+            return sum(debt.outstanding_amount for debt in actual_debts)
+
+        # Fallback to calculated debt (sales revenue - payments received)
+        sales_revenue = self.actual_total_revenue if self.has_sales_data else self.total_revenue
+        return max(Decimal('0.00'), sales_revenue - self.total_payments_received)
+
+    @property
+    def effective_sales_revenue(self):
+        """Get effective sales revenue (actual if available, otherwise planned)"""
+        return self.actual_total_revenue if self.has_sales_data else self.total_revenue
+
     class Meta:
         ordering = ['-date']
         unique_together = ['date']
@@ -172,6 +206,7 @@ class Debt(models.Model):
     ]
 
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='debts')
+    order = models.ForeignKey('WeeklyOrder', on_delete=models.CASCADE, related_name='debts', null=True, blank=True)
     amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,

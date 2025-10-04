@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Payment Update</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        input { padding: 10px; margin: 10px; width: 200px; }
+        button { padding: 10px 20px; margin: 10px; }
+        .result { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Test Payment Update Functionality</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Direct API Call</h2>
+        <button onclick="testDirectAPI()">Test Direct PATCH Request</button>
+        <div id="direct-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Using Frontend Function</h2>
+        <input type="number" id="test-cash" placeholder="Cash Amount" value="12000">
+        <input type="number" id="test-transfer" placeholder="Transfer Amount" value="3000">
+        <button onclick="testFrontendFunction()">Test updatePaymentField Function</button>
+        <div id="frontend-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Check Current Order Data</h2>
+        <button onclick="checkOrderData()">Get Order 78 Data</button>
+        <div id="order-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000/api';
+        
+        // Copy the apiRequest function from the main script
+        async function apiRequest(endpoint, options = {}) {
+            const url = `${API_BASE_URL}${endpoint}`;
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+
+            try {
+                const response = await fetch(url, { ...defaultOptions, ...options });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('API request failed:', error);
+                throw error;
+            }
+        }
+        
+        // Copy the updatePaymentField function
+        async function updatePaymentField(orderId, fieldName, value) {
+            console.log('updatePaymentField called:', { orderId, fieldName, value });
+            
+            try {
+                const updateData = {};
+                updateData[fieldName] = parseFloat(value) || 0;
+                
+                console.log('Sending PATCH request with data:', updateData);
+
+                const patchResponse = await apiRequest(`/orders/${orderId}/`, {
+                    method: 'PATCH',
+                    body: JSON.stringify(updateData)
+                });
+                
+                console.log('PATCH response:', patchResponse);
+
+                // Refresh the order details to show updated calculations
+                console.log('Fetching updated order data...');
+                const updatedOrder = await apiRequest(`/orders/${orderId}/`);
+                console.log('Updated order data:', updatedOrder);
+                
+                return { success: true, updatedOrder };
+            } catch (error) {
+                console.error('Failed to update payment field:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function testDirectAPI() {
+            const resultDiv = document.getElementById('direct-result');
+            resultDiv.innerHTML = 'Testing direct API call...';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/orders/78/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        cash_received: '11000.00'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `<strong>SUCCESS:</strong> Direct API call worked!<br>
+                                         Cash received updated to: ${data.cash_received}<br>
+                                         Total payments: ${data.total_payments_received}`;
+                } else {
+                    resultDiv.innerHTML = `<strong>ERROR:</strong> HTTP ${response.status} - ${response.statusText}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>ERROR:</strong> ${error.message}`;
+            }
+        }
+        
+        async function testFrontendFunction() {
+            const resultDiv = document.getElementById('frontend-result');
+            const cashValue = document.getElementById('test-cash').value;
+            const transferValue = document.getElementById('test-transfer').value;
+            
+            resultDiv.innerHTML = 'Testing frontend function...';
+            
+            try {
+                // Test cash update
+                const cashResult = await updatePaymentField(78, 'cash_received', cashValue);
+                
+                if (cashResult.success) {
+                    // Test transfer update
+                    const transferResult = await updatePaymentField(78, 'transfer_received', transferValue);
+                    
+                    if (transferResult.success) {
+                        resultDiv.innerHTML = `<strong>SUCCESS:</strong> Frontend function worked!<br>
+                                             Cash: ${transferResult.updatedOrder.cash_received}<br>
+                                             Transfer: ${transferResult.updatedOrder.transfer_received}<br>
+                                             Total payments: ${transferResult.updatedOrder.total_payments_received}`;
+                    } else {
+                        resultDiv.innerHTML = `<strong>ERROR:</strong> Transfer update failed: ${transferResult.error}`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<strong>ERROR:</strong> Cash update failed: ${cashResult.error}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>ERROR:</strong> ${error.message}`;
+            }
+        }
+        
+        async function checkOrderData() {
+            const resultDiv = document.getElementById('order-result');
+            resultDiv.innerHTML = 'Fetching order data...';
+            
+            try {
+                const order = await apiRequest('/orders/78/');
+                resultDiv.innerHTML = `<strong>Order 78 Data:</strong><br>
+                                     Cash received: ${order.cash_received}<br>
+                                     Transfer received: ${order.transfer_received}<br>
+                                     Total payments: ${order.total_payments_received}<br>
+                                     Total debt: ${order.total_debt}<br>
+                                     Effective sales revenue: ${order.effective_sales_revenue}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>ERROR:</strong> ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

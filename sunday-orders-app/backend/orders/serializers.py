@@ -85,10 +85,24 @@ class ExpenseSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at']
 
 
+class DebtSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source='customer.name', read_only=True)
+    order_date = serializers.DateField(source='order.date', read_only=True)
+    outstanding_amount = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Debt
+        fields = ['id', 'customer', 'customer_name', 'order', 'order_date', 'amount', 'amount_paid',
+                 'outstanding_amount', 'description', 'date_created', 'date_paid',
+                 'status', 'notes', 'created_at', 'updated_at']
+        read_only_fields = ['status', 'created_at', 'updated_at']
+
+
 class WeeklyOrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     giveaways = GiveawaySerializer(many=True, read_only=True)
     expenses = ExpenseSerializer(many=True, read_only=True)
+    debts = DebtSerializer(many=True, read_only=True)
     total_cost = serializers.ReadOnlyField()
     total_revenue = serializers.ReadOnlyField()
     total_profit = serializers.ReadOnlyField()
@@ -101,23 +115,26 @@ class WeeklyOrderSerializer(serializers.ModelSerializer):
     planned_net_profit = serializers.ReadOnlyField()
     has_sales_data = serializers.ReadOnlyField()
     sales_completion_percentage = serializers.ReadOnlyField()
+    total_payments_received = serializers.ReadOnlyField()
+    total_debt = serializers.ReadOnlyField()
+    effective_sales_revenue = serializers.ReadOnlyField()
 
     class Meta:
         model = WeeklyOrder
-        fields = ['id', 'date', 'notes', 'items', 'giveaways', 'expenses', 'total_cost', 'total_revenue',
-                 'total_profit', 'actual_total_revenue', 'actual_total_cost',
-                 'actual_total_profit', 'total_giveaway_cost', 'total_expenses',
-                 'true_net_profit', 'planned_net_profit', 'has_sales_data', 'sales_completion_percentage',
-                 'created_at', 'updated_at']
+        fields = ['id', 'date', 'notes', 'cash_received', 'transfer_received', 'items', 'giveaways', 'expenses', 'debts',
+                 'total_cost', 'total_revenue', 'total_profit', 'actual_total_revenue', 'actual_total_cost',
+                 'actual_total_profit', 'total_giveaway_cost', 'total_expenses', 'true_net_profit',
+                 'planned_net_profit', 'has_sales_data', 'sales_completion_percentage', 'total_payments_received',
+                 'total_debt', 'effective_sales_revenue', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
 
 class WeeklyOrderCreateSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True)
+    items = OrderItemSerializer(many=True, required=False)
 
     class Meta:
         model = WeeklyOrder
-        fields = ['id', 'date', 'notes', 'items']
+        fields = ['id', 'date', 'notes', 'cash_received', 'transfer_received', 'items']
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
@@ -129,31 +146,23 @@ class WeeklyOrderCreateSerializer(serializers.ModelSerializer):
         return order
 
     def update(self, instance, validated_data):
-        items_data = validated_data.pop('items', [])
+        items_data = validated_data.pop('items', None)
 
         # Update order fields
         instance.date = validated_data.get('date', instance.date)
         instance.notes = validated_data.get('notes', instance.notes)
+        instance.cash_received = validated_data.get('cash_received', instance.cash_received)
+        instance.transfer_received = validated_data.get('transfer_received', instance.transfer_received)
         instance.save()
 
-        # Clear existing items and create new ones
-        instance.items.all().delete()
-        for item_data in items_data:
-            OrderItem.objects.create(order=instance, **item_data)
+        # Only update items if items_data is provided
+        if items_data is not None:
+            # Clear existing items and create new ones
+            instance.items.all().delete()
+            for item_data in items_data:
+                OrderItem.objects.create(order=instance, **item_data)
 
         return instance
-
-
-class DebtSerializer(serializers.ModelSerializer):
-    customer_name = serializers.CharField(source='customer.name', read_only=True)
-    outstanding_amount = serializers.ReadOnlyField()
-
-    class Meta:
-        model = Debt
-        fields = ['id', 'customer', 'customer_name', 'amount', 'amount_paid',
-                 'outstanding_amount', 'description', 'date_created', 'date_paid',
-                 'status', 'notes', 'created_at', 'updated_at']
-        read_only_fields = ['status', 'created_at', 'updated_at']
 
 
 class DebtPaymentSerializer(serializers.Serializer):

@@ -478,6 +478,10 @@ function showError(message) {
     alert(message); // Simple error handling - can be improved with toast notifications
 }
 
+function showSuccess(message) {
+    alert(message); // Simple success handling - can be improved with toast notifications
+}
+
 function showModal(title, content) {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-body').innerHTML = content;
@@ -1587,9 +1591,12 @@ async function submitEditGiveaway(event, giveawayId) {
 
 async function showDebtForm() {
     try {
-        // Get customers for the dropdown
+        // Get customers and orders for the dropdowns
         const customersData = await apiRequest('/customers/');
         const customers = customersData.results || customersData;
+
+        const ordersData = await apiRequest('/orders/');
+        const orders = ordersData.results || ordersData;
 
         const formContent = `
             <form id="new-debt-form" onsubmit="submitNewDebt(event)">
@@ -1606,6 +1613,17 @@ async function showDebtForm() {
                             <option value="${customer.id}">${customer.name}</option>
                         `).join('')}
                     </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Weekly Order (optional)</label>
+                    <select class="form-input" name="order">
+                        <option value="">No specific order</option>
+                        ${orders.sort((a, b) => new Date(b.date) - new Date(a.date)).map(order => `
+                            <option value="${order.id}">Order #${order.id} - ${formatDate(order.date)}</option>
+                        `).join('')}
+                    </select>
+                    <small class="form-help">Link this debt to a specific weekly order (optional)</small>
                 </div>
 
                 <div class="form-row">
@@ -1680,6 +1698,7 @@ async function submitNewDebt(event) {
     const formData = new FormData(form);
 
     const customerId = formData.get('customer');
+    const orderId = formData.get('order');
     const amount = parseFloat(formData.get('amount'));
     const dateCreated = formData.get('date_created');
     const description = formData.get('description').trim();
@@ -1715,6 +1734,11 @@ async function submitNewDebt(event) {
             description: description,
             date_created: dateCreated
         };
+
+        // Add order if selected
+        if (orderId) {
+            debtData.order = orderId;
+        }
 
         // If there's an initial payment, include it
         if (initialPayment > 0) {
@@ -1808,76 +1832,290 @@ function showOrderDetailModal(order) {
                 </div>
             </div>
 
-            <div class="order-summary-cards">
-                <div class="summary-card planned">
-                    <h4>Planned</h4>
-                    <div class="metric">Revenue: ${formatCurrency(order.total_revenue)}</div>
-                    <div class="metric">Cost: ${formatCurrency(order.total_cost)}</div>
-                    <div class="metric profit">Profit: ${formatCurrency(order.total_profit)}</div>
-                </div>
-                <div class="summary-card actual">
-                    <h4>Actual</h4>
-                    <div class="metric">Revenue: ${formatCurrency(order.actual_total_revenue)}</div>
-                    <div class="metric">Cost: ${formatCurrency(order.actual_total_cost)}</div>
-                    <div class="metric profit">Profit: ${formatCurrency(order.actual_total_profit)}</div>
-                </div>
-                <div class="summary-card variance">
-                    <h4>Variance</h4>
-                    <div class="metric">Revenue: ${formatCurrency(order.actual_total_revenue - order.total_revenue)}</div>
-                    <div class="metric">Cost: ${formatCurrency(order.actual_total_cost - order.total_cost)}</div>
-                    <div class="metric profit">Profit: ${formatCurrency(order.actual_total_profit - order.total_profit)}</div>
-                </div>
-            </div>
+            <div class="order-detail-content">
+                <!-- Financial Summary Section -->
+                <div class="financial-summary-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-chart-line"></i> Financial Summary</h4>
+                    </div>
+                    <div class="financial-summary-cards">
+                        <div class="summary-card revenue">
+                            <h5>Sales Revenue</h5>
+                            <div class="amount">${formatCurrency(order.effective_sales_revenue)}</div>
+                            <small>${hasActualSales ? 'Actual' : 'Planned'}</small>
+                        </div>
+                        <div class="summary-card payments">
+                            <h5>Total Payments</h5>
+                            <div class="amount">${formatCurrency(order.total_payments_received)}</div>
+                            <div class="payment-breakdown">
+                                <small>Cash: ${formatCurrency(order.cash_received)}</small>
+                                <small>Transfer: ${formatCurrency(order.transfer_received)}</small>
+                            </div>
+                        </div>
+                        <div class="summary-card debt">
+                            <h5>Outstanding Debt</h5>
+                            <div class="amount debt-amount">${formatCurrency(order.total_debt)}</div>
+                            <small>${order.debts && order.debts.length > 0 ? 'From Debt Records' : 'Sales - Payments'}</small>
+                        </div>
+                        <div class="summary-card costs">
+                            <h5>Total Costs</h5>
+                            <div class="amount">${formatCurrency(order.total_giveaway_cost + order.total_expenses)}</div>
+                            <div class="cost-breakdown">
+                                <small>Giveaways: ${formatCurrency(order.total_giveaway_cost)}</small>
+                                <small>Expenses: ${formatCurrency(order.total_expenses)}</small>
+                            </div>
+                        </div>
+                        <div class="summary-card profit">
+                            <h5>True Net Profit</h5>
+                            <div class="amount profit-amount">${formatCurrency(order.effective_sales_revenue - order.total_giveaway_cost - order.total_expenses)}</div>
+                            <small>Revenue - Costs</small>
+                        </div>
+                    </div>
 
-            <div class="order-items-section">
-                <div class="section-header">
-                    <h4>Items</h4>
-                    <button class="btn btn-primary" onclick="showSalesEntryForm(${order.id})">
-                        <i class="fas fa-edit"></i> Enter Sales Data
-                    </button>
+                    <!-- Payment Tracking Form -->
+                    <div class="payment-tracking-form">
+                        <h5><i class="fas fa-money-bill-wave"></i> Payment Tracking</h5>
+                        <div class="payment-inputs">
+                            <div class="input-group">
+                                <label for="cash-received-${order.id}">Cash Received</label>
+                                <input type="number" id="cash-received-${order.id}"
+                                       value="${order.cash_received}"
+                                       min="0" step="0.01"
+                                       onblur="updatePaymentField(${order.id}, 'cash_received', this.value)">
+                            </div>
+                            <div class="input-group">
+                                <label for="transfer-received-${order.id}">Transfer Received</label>
+                                <input type="number" id="transfer-received-${order.id}"
+                                       value="${order.transfer_received}"
+                                       min="0" step="0.01"
+                                       onblur="updatePaymentField(${order.id}, 'transfer_received', this.value)">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="items-table">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Planned Qty</th>
-                                <th>Sold Qty</th>
-                                <th>Remaining</th>
-                                <th>Planned Price</th>
-                                <th>Actual Price</th>
-                                <th>Sell-through %</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${order.items.map(item => `
+                <!-- Giveaways Section -->
+                ${order.giveaways && order.giveaways.length > 0 ? `
+                <div class="giveaways-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-gift"></i> Giveaways (Total: ${formatCurrency(order.total_giveaway_cost)})</h4>
+                    </div>
+                    <div class="giveaways-table">
+                        <table class="table">
+                            <thead>
                                 <tr>
-                                    <td><strong>${item.product_name}</strong></td>
-                                    <td>${item.quantity}</td>
-                                    <td>${item.sales ? item.sales.quantity_sold : '-'}</td>
-                                    <td>${item.sales ? item.sales.quantity_remaining : item.quantity}</td>
-                                    <td>${formatCurrency(item.sell_price)}</td>
-                                    <td>${item.sales ? formatCurrency(item.sales.actual_sell_price) : '-'}</td>
-                                    <td>${item.sales ? item.sales.sell_through_rate.toFixed(1) + '%' : '0%'}</td>
-                                    <td>
-                                        <span class="status-badge ${item.has_sales ? 'status-complete' : 'status-pending'}">
-                                            ${item.has_sales ? 'Complete' : 'Pending'}
-                                        </span>
-                                    </td>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Recipient</th>
+                                    <th>Cost per Unit</th>
+                                    <th>Total Cost</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                ${order.giveaways.map(giveaway => `
+                                    <tr>
+                                        <td><strong>${giveaway.product_name}</strong></td>
+                                        <td>${giveaway.quantity}</td>
+                                        <td>${giveaway.recipient}</td>
+                                        <td>${formatCurrency(giveaway.cost_price)}</td>
+                                        <td>${formatCurrency(giveaway.total_cost)}</td>
+                                        <td>${formatDate(giveaway.date_given)}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline" onclick="editGiveaway(${giveaway.id})">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteGiveaway(${giveaway.id})">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+                ` : ''}
 
-            ${order.notes ? `<div class="order-notes"><strong>Notes:</strong> ${order.notes}</div>` : ''}
+                <!-- Expenses Section -->
+                ${order.expenses && order.expenses.length > 0 ? `
+                <div class="expenses-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-receipt"></i> Expenses (Total: ${formatCurrency(order.total_expenses)})</h4>
+                    </div>
+                    <div class="expenses-table">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${order.expenses.map(expense => `
+                                    <tr>
+                                        <td><span class="category-badge">${expense.category_display}</span></td>
+                                        <td>${expense.description}</td>
+                                        <td>${formatCurrency(expense.amount)}</td>
+                                        <td>${formatDate(expense.date)}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline" onclick="editExpense(${expense.id})">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteExpense(${expense.id})">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Debt Records Section -->
+                ${order.debts && order.debts.length > 0 ? `
+                <div class="debts-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-credit-card"></i> Debt Records (Total: ${formatCurrency(order.total_debt)})</h4>
+                    </div>
+                    <div class="debts-table">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Amount</th>
+                                    <th>Paid</th>
+                                    <th>Outstanding</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${order.debts.map(debt => `
+                                    <tr>
+                                        <td>${debt.customer_name}</td>
+                                        <td>${formatCurrency(debt.amount)}</td>
+                                        <td>${formatCurrency(debt.amount_paid)}</td>
+                                        <td><strong>${formatCurrency(debt.outstanding_amount)}</strong></td>
+                                        <td><span class="status-badge ${debt.status}">${debt.status}</span></td>
+                                        <td>${formatDate(debt.date_created)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Performance Summary Cards -->
+                <div class="order-summary-cards">
+                    <div class="summary-card planned">
+                        <h4>Planned</h4>
+                        <div class="metric">Revenue: ${formatCurrency(order.total_revenue)}</div>
+                        <div class="metric">Cost: ${formatCurrency(order.total_cost)}</div>
+                        <div class="metric profit">Profit: ${formatCurrency(order.total_profit)}</div>
+                    </div>
+                    <div class="summary-card actual">
+                        <h4>Actual</h4>
+                        <div class="metric">Revenue: ${formatCurrency(order.actual_total_revenue)}</div>
+                        <div class="metric">Cost: ${formatCurrency(order.actual_total_cost)}</div>
+                        <div class="metric profit">Profit: ${formatCurrency(order.actual_total_profit)}</div>
+                    </div>
+                    <div class="summary-card variance">
+                        <h4>Variance</h4>
+                        <div class="metric">Revenue: ${formatCurrency(order.actual_total_revenue - order.total_revenue)}</div>
+                        <div class="metric">Cost: ${formatCurrency(order.actual_total_cost - order.total_cost)}</div>
+                        <div class="metric profit">Profit: ${formatCurrency(order.actual_total_profit - order.total_profit)}</div>
+                    </div>
+                </div>
+
+                <!-- Items Section -->
+                <div class="order-items-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-box"></i> Items</h4>
+                        <button class="btn btn-primary" onclick="showSalesEntryForm(${order.id})">
+                            <i class="fas fa-edit"></i> Enter Sales Data
+                        </button>
+                    </div>
+
+                    <div class="items-table">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Planned Qty</th>
+                                    <th>Sold Qty</th>
+                                    <th>Remaining</th>
+                                    <th>Planned Price</th>
+                                    <th>Actual Price</th>
+                                    <th>Sell-through %</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${order.items.map(item => `
+                                    <tr>
+                                        <td><strong>${item.product_name}</strong></td>
+                                        <td>${item.quantity}</td>
+                                        <td>${item.sales ? item.sales.quantity_sold : '-'}</td>
+                                        <td>${item.sales ? item.sales.quantity_remaining : item.quantity}</td>
+                                        <td>${formatCurrency(item.sell_price)}</td>
+                                        <td>${item.sales ? formatCurrency(item.sales.actual_sell_price) : '-'}</td>
+                                        <td>${item.sales ? item.sales.sell_through_rate.toFixed(1) + '%' : '0%'}</td>
+                                        <td>
+                                            <span class="status-badge ${item.has_sales ? 'status-complete' : 'status-pending'}">
+                                                ${item.has_sales ? 'Complete' : 'Pending'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                ${order.notes ? `<div class="order-notes"><strong>Notes:</strong> ${order.notes}</div>` : ''}
+            </div>
         </div>
     `;
 
     showModal(`Order Details - ${formatDate(order.date)}`, modalContent);
+}
+
+async function updatePaymentField(orderId, fieldName, value) {
+    console.log('updatePaymentField called:', { orderId, fieldName, value });
+
+    try {
+        const updateData = {};
+        updateData[fieldName] = parseFloat(value) || 0;
+
+        console.log('Sending PATCH request with data:', updateData);
+
+        const patchResponse = await apiRequest(`/orders/${orderId}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(updateData)
+        });
+
+        console.log('PATCH response:', patchResponse);
+
+        // Refresh the order details to show updated calculations
+        console.log('Fetching updated order data...');
+        const updatedOrder = await apiRequest(`/orders/${orderId}/`);
+        console.log('Updated order data:', updatedOrder);
+
+        showOrderDetailModal(updatedOrder);
+
+        showSuccess('Payment information updated successfully');
+    } catch (error) {
+        console.error('Failed to update payment field:', error);
+        showError('Failed to update payment information');
+    }
 }
 
 function viewCustomer(customerId) {
@@ -1997,9 +2235,12 @@ async function editDebt(debtId) {
         // Get the existing debt details
         const debt = await apiRequest(`/debts/${debtId}/`);
 
-        // Get customers for the dropdown
+        // Get customers and orders for the dropdowns
         const customersData = await apiRequest('/customers/');
         const customers = customersData.results || customersData;
+
+        const ordersData = await apiRequest('/orders/');
+        const orders = ordersData.results || ordersData;
 
         const formContent = `
             <form id="edit-debt-form" onsubmit="submitEditDebt(event, ${debtId})">
@@ -2018,6 +2259,19 @@ async function editDebt(debtId) {
                             </option>
                         `).join('')}
                     </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Weekly Order (optional)</label>
+                    <select class="form-input" name="order">
+                        <option value="">No specific order</option>
+                        ${orders.sort((a, b) => new Date(b.date) - new Date(a.date)).map(order => `
+                            <option value="${order.id}" ${order.id === debt.order ? 'selected' : ''}>
+                                Order #${order.id} - ${formatDate(order.date)}
+                            </option>
+                        `).join('')}
+                    </select>
+                    <small class="form-help">Link this debt to a specific weekly order (optional)</small>
                 </div>
 
                 <div class="form-row">
@@ -2125,6 +2379,7 @@ async function submitEditDebt(event, debtId) {
     const formData = new FormData(form);
 
     const customerId = formData.get('customer');
+    const orderId = formData.get('order');
     const amount = parseFloat(formData.get('amount'));
     const dateCreated = formData.get('date_created');
     const description = formData.get('description').trim();
@@ -2163,6 +2418,9 @@ async function submitEditDebt(event, debtId) {
             amount_paid: amountPaid.toFixed(2),
             status: status
         };
+
+        // Add order if selected (or null if not selected)
+        debtData.order = orderId || null;
 
         console.log('Updating debt:', debtData); // Debug log
 
@@ -2640,5 +2898,153 @@ async function submitSalesEntry(event, orderId) {
         showLoading(false);
         console.error('Failed to save sales data:', error);
         showError('Failed to save sales data. Please check your entries and try again.');
+    }
+}
+
+// Giveaway Edit and Delete Functions
+async function editGiveaway(giveawayId) {
+    try {
+        // Use the existing showGiveawayForm function with the giveaway ID
+        await showGiveawayForm(giveawayId);
+    } catch (error) {
+        console.error('Failed to edit giveaway:', error);
+        showError('Failed to load giveaway for editing. Please try again.');
+    }
+}
+
+async function deleteGiveaway(giveawayId) {
+    try {
+        // Get giveaway details for confirmation
+        const giveaway = await apiRequest(`/giveaways/${giveawayId}/`);
+
+        // Show confirmation dialog
+        const confirmed = confirm(
+            `Are you sure you want to delete this giveaway?\n\n` +
+            `Product: ${giveaway.product_name}\n` +
+            `Quantity: ${giveaway.quantity}\n` +
+            `Recipient: ${giveaway.recipient}\n` +
+            `Total Cost: ${formatCurrency(giveaway.total_cost)}\n\n` +
+            `This action cannot be undone.`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        showLoading(true);
+
+        // Delete the giveaway
+        await apiRequest(`/giveaways/${giveawayId}/`, {
+            method: 'DELETE'
+        });
+
+        showLoading(false);
+
+        // Show success message
+        showSuccess('Giveaway deleted successfully!');
+
+        // Refresh the current order detail modal if it's open
+        const modal = document.getElementById('modal-overlay');
+        if (modal && modal.style.display !== 'none') {
+            // Find the order ID from the modal content and refresh it
+            const orderDetailContent = document.querySelector('.order-detail-content');
+            if (orderDetailContent) {
+                // Get the order ID from the modal title or data attribute
+                const modalTitle = document.getElementById('modal-title');
+                if (modalTitle && modalTitle.textContent.includes('Order Details')) {
+                    // Extract order ID and refresh the modal
+                    const orderIdMatch = modalTitle.textContent.match(/Order #(\d+)/);
+                    if (orderIdMatch) {
+                        const orderId = orderIdMatch[1];
+                        const updatedOrder = await apiRequest(`/orders/${orderId}/`);
+                        showOrderDetailModal(updatedOrder);
+                    }
+                }
+            }
+        }
+
+        // Refresh tracking page if currently viewing it
+        if (currentPage === 'tracking') {
+            await loadTrackingData();
+        }
+
+    } catch (error) {
+        showLoading(false);
+        console.error('Failed to delete giveaway:', error);
+        showError('Failed to delete giveaway. Please try again.');
+    }
+}
+
+// Expense Edit and Delete Functions
+async function editExpense(expenseId) {
+    try {
+        // Use the existing showExpenseForm function with the expense ID
+        await showExpenseForm(expenseId);
+    } catch (error) {
+        console.error('Failed to edit expense:', error);
+        showError('Failed to load expense for editing. Please try again.');
+    }
+}
+
+async function deleteExpense(expenseId) {
+    try {
+        // Get expense details for confirmation
+        const expense = await apiRequest(`/expenses/${expenseId}/`);
+
+        // Show confirmation dialog
+        const confirmed = confirm(
+            `Are you sure you want to delete this expense?\n\n` +
+            `Category: ${expense.category_display}\n` +
+            `Description: ${expense.description}\n` +
+            `Amount: ${formatCurrency(expense.amount)}\n` +
+            `Date: ${formatDate(expense.date)}\n\n` +
+            `This action cannot be undone.`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        showLoading(true);
+
+        // Delete the expense
+        await apiRequest(`/expenses/${expenseId}/`, {
+            method: 'DELETE'
+        });
+
+        showLoading(false);
+
+        // Show success message
+        showSuccess('Expense deleted successfully!');
+
+        // Refresh the current order detail modal if it's open
+        const modal = document.getElementById('modal-overlay');
+        if (modal && modal.style.display !== 'none') {
+            // Find the order ID from the modal content and refresh it
+            const orderDetailContent = document.querySelector('.order-detail-content');
+            if (orderDetailContent) {
+                // Get the order ID from the modal title or data attribute
+                const modalTitle = document.getElementById('modal-title');
+                if (modalTitle && modalTitle.textContent.includes('Order Details')) {
+                    // Extract order ID and refresh the modal
+                    const orderIdMatch = modalTitle.textContent.match(/Order #(\d+)/);
+                    if (orderIdMatch) {
+                        const orderId = orderIdMatch[1];
+                        const updatedOrder = await apiRequest(`/orders/${orderId}/`);
+                        showOrderDetailModal(updatedOrder);
+                    }
+                }
+            }
+        }
+
+        // Refresh tracking page if currently viewing it
+        if (currentPage === 'tracking') {
+            await loadTrackingData();
+        }
+
+    } catch (error) {
+        showLoading(false);
+        console.error('Failed to delete expense:', error);
+        showError('Failed to delete expense. Please try again.');
     }
 }
