@@ -32,6 +32,7 @@ class SalesEntrySerializer(serializers.ModelSerializer):
     quantity_remaining = serializers.ReadOnlyField()
     sell_through_rate = serializers.ReadOnlyField()
     planned_vs_actual_variance = serializers.ReadOnlyField()
+    notes = serializers.CharField(required=False, allow_blank=True, default='')
 
     class Meta:
         model = SalesEntry
@@ -162,6 +163,8 @@ class DebtPaymentSerializer(serializers.Serializer):
 
 
 class SalesEntryCreateSerializer(serializers.ModelSerializer):
+    notes = serializers.CharField(required=False, allow_blank=True, default='')
+
     class Meta:
         model = SalesEntry
         fields = ['order_item', 'quantity_sold', 'actual_sell_price', 'notes']
@@ -187,9 +190,7 @@ class SalesEntryCreateSerializer(serializers.ModelSerializer):
 class BulkSalesEntrySerializer(serializers.Serializer):
     """Serializer for bulk sales entry for a weekly order"""
     sales_entries = serializers.ListField(
-        child=serializers.DictField(
-            child=serializers.CharField()
-        )
+        child=serializers.DictField()
     )
 
     def validate_sales_entries(self, value):
