@@ -1818,7 +1818,6 @@ async function viewOrder(orderId) {
 }
 
 function showOrderDetailModal(order) {
-    const hasActualSales = order.has_sales_data;
     const completionPercentage = order.sales_completion_percentage;
 
     const modalContent = `
@@ -1826,7 +1825,7 @@ function showOrderDetailModal(order) {
             <div class="order-header">
                 <h3>Order for ${formatDate(order.date)}</h3>
                 <div class="order-status">
-                    <span class="completion-badge ${hasActualSales ? 'has-data' : 'no-data'}">
+                    <span class="completion-badge ${order.has_sales_data ? 'has-data' : 'no-data'}">
                         ${completionPercentage.toFixed(0)}% Sales Data Entered
                     </span>
                 </div>
@@ -1842,7 +1841,7 @@ function showOrderDetailModal(order) {
                         <div class="summary-card revenue">
                             <h5>Sales Revenue</h5>
                             <div class="amount">${formatCurrency(order.effective_sales_revenue)}</div>
-                            <small>${hasActualSales ? 'Actual' : 'Planned'}</small>
+                            <small>From Sales Entries</small>
                         </div>
                         <div class="summary-card payments">
                             <h5>Total Payments</h5>
@@ -1859,15 +1858,15 @@ function showOrderDetailModal(order) {
                         </div>
                         <div class="summary-card costs">
                             <h5>Total Costs</h5>
-                            <div class="amount">${formatCurrency(order.total_giveaway_cost + order.total_expenses)}</div>
+                            <div class="amount">${formatCurrency((order.total_giveaway_cost || 0) + (order.total_expenses || 0))}</div>
                             <div class="cost-breakdown">
-                                <small>Giveaways: ${formatCurrency(order.total_giveaway_cost)}</small>
-                                <small>Expenses: ${formatCurrency(order.total_expenses)}</small>
+                                <small>Giveaways: ${formatCurrency(order.total_giveaway_cost || 0)}</small>
+                                <small>Expenses: ${formatCurrency(order.total_expenses || 0)}</small>
                             </div>
                         </div>
                         <div class="summary-card profit">
                             <h5>True Net Profit</h5>
-                            <div class="amount profit-amount">${formatCurrency(order.effective_sales_revenue - order.total_giveaway_cost - order.total_expenses)}</div>
+                            <div class="amount profit-amount">${formatCurrency((order.effective_sales_revenue || 0) - (order.total_giveaway_cost || 0) - (order.total_expenses || 0))}</div>
                             <small>Revenue - Costs</small>
                         </div>
                     </div>
@@ -1910,7 +1909,6 @@ function showOrderDetailModal(order) {
                                     <th>Cost per Unit</th>
                                     <th>Total Cost</th>
                                     <th>Date</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1922,14 +1920,6 @@ function showOrderDetailModal(order) {
                                         <td>${formatCurrency(giveaway.cost_price)}</td>
                                         <td>${formatCurrency(giveaway.total_cost)}</td>
                                         <td>${formatDate(giveaway.date_given)}</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline" onclick="editGiveaway(${giveaway.id})">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </button>
-                                            <button class="btn btn-sm btn-danger" onclick="deleteGiveaway(${giveaway.id})">
-                                                <i class="fas fa-trash"></i> Delete
-                                            </button>
-                                        </td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -1952,7 +1942,6 @@ function showOrderDetailModal(order) {
                                     <th>Description</th>
                                     <th>Amount</th>
                                     <th>Date</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1962,14 +1951,6 @@ function showOrderDetailModal(order) {
                                         <td>${expense.description}</td>
                                         <td>${formatCurrency(expense.amount)}</td>
                                         <td>${formatDate(expense.date)}</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline" onclick="editExpense(${expense.id})">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </button>
-                                            <button class="btn btn-sm btn-danger" onclick="deleteExpense(${expense.id})">
-                                                <i class="fas fa-trash"></i> Delete
-                                            </button>
-                                        </td>
                                     </tr>
                                 `).join('')}
                             </tbody>

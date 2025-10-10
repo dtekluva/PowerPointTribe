@@ -152,8 +152,8 @@ class WeeklyOrder(models.Model):
 
     @property
     def effective_sales_revenue(self):
-        """Get effective sales revenue (actual if available, otherwise planned)"""
-        return self.actual_total_revenue if self.has_sales_data else self.total_revenue
+        """Get actual sales revenue from sales entries only"""
+        return self.actual_total_revenue
 
     class Meta:
         ordering = ['-date']
