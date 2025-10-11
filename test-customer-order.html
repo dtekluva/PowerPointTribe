@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Customer Order</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Customer Order Platform Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Test API Connection</h2>
+        <button onclick="testAPIConnection()">Test API Connection</button>
+        <div id="api-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Product Loading</h2>
+        <button onclick="testProductLoading()">Load Products</button>
+        <div id="products-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Test Order Submission</h2>
+        <button onclick="testOrderSubmission()">Submit Test Order</button>
+        <div id="order-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Test Name Validation</h2>
+        <button onclick="testNameValidation()">Test Name Validation</button>
+        <div id="name-result"></div>
+    </div>
+
+    <script>
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE_URL = isDevelopment 
+            ? 'http://127.0.0.1:8000/api'  // Local development
+            : 'https://ppt.giftoria.cc/api'; // Production
+
+        async function apiRequest(endpoint, options = {}) {
+            const url = `${API_BASE_URL}${endpoint}`;
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+
+            try {
+                const response = await fetch(url, { ...defaultOptions, ...options });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('API request failed:', error);
+                throw error;
+            }
+        }
+
+        async function testAPIConnection() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<div class="info">Testing API connection...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/products/`);
+                if (response.ok) {
+                    resultDiv.innerHTML = '<div class="success">✅ API connection successful!</div>';
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ API connection failed: ${response.status}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ API connection failed: ${error.message}</div>`;
+            }
+        }
+
+        async function testProductLoading() {
+            const resultDiv = document.getElementById('products-result');
+            resultDiv.innerHTML = '<div class="info">Loading products...</div>';
+            
+            try {
+                const data = await apiRequest('/products/');
+                const products = data.results || data;
+                
+                if (products && products.length > 0) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Products loaded successfully! Found ${products.length} products</div>
+                        <pre>First 3 products:
+${JSON.stringify(products.slice(0, 3), null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ No products found</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Failed to load products: ${error.message}</div>`;
+            }
+        }
+
+        async function testOrderSubmission() {
+            const resultDiv = document.getElementById('order-result');
+            resultDiv.innerHTML = '<div class="info">Submitting test order...</div>';
+            
+            try {
+                // First get a product to use in the order
+                const productsData = await apiRequest('/products/');
+                const products = productsData.results || productsData;
+                
+                if (!products || products.length === 0) {
+                    resultDiv.innerHTML = '<div class="error">❌ No products available for testing</div>';
+                    return;
+                }
+                
+                const testProduct = products[0];
+                const orderData = {
+                    customer_name: `Test Customer ${Date.now()}`,
+                    phone_number: "08012345678",
+                    payment_method: "pay_on_collection",
+                    items: [{
+                        id: testProduct.id,
+                        quantity: 1,
+                        price: parseFloat(testProduct.default_sell_price)
+                    }],
+                    total_amount: parseFloat(testProduct.default_sell_price),
+                    order_date: new Date().toISOString().split('T')[0]
+                };
+                
+                const response = await apiRequest('/customer-orders/', {
+                    method: 'POST',
+                    body: JSON.stringify(orderData)
+                });
+                
+                if (response.order_reference) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Order submitted successfully!</div>
+                        <pre>Order Details:
+Order Reference: ${response.order_reference}
+Customer: ${response.customer_name}
+Total: ₦${response.total_amount}
+Items: ${response.total_items}
+Status: ${response.status_display}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ Order submitted but no order reference returned</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Failed to submit order: ${error.message}</div>`;
+            }
+        }
+
+        async function testNameValidation() {
+            const resultDiv = document.getElementById('name-result');
+            resultDiv.innerHTML = '<div class="info">Testing name validation...</div>';
+            
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const testName = "Test Customer";
+                
+                const response = await apiRequest(`/customer-orders/?order_date=${today}&customer_name=${encodeURIComponent(testName)}`);
+                const orders = response.results || response;
+                
+                const nameExists = orders.some(order => 
+                    order.customer_name.toLowerCase() === testName.toLowerCase()
+                );
+                
+                if (nameExists) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Name validation working - found existing order for "${testName}"</div>
+                        <pre>Existing orders: ${orders.length}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Name validation working - no existing order for "${testName}"</div>
+                        <pre>Total orders today: ${orders.length}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Failed to test name validation: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-run API connection test on page load
+        window.addEventListener('DOMContentLoaded', testAPIConnection);
+    </script>
+</body>
+</html>

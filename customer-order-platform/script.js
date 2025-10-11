@@ -1,6 +1,6 @@
 // Configuration
 const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_BASE_URL = isDevelopment 
+const API_BASE_URL = isDevelopment
     ? 'http://127.0.0.1:8000/api'  // Local development
     : 'https://ppt.giftoria.cc/api'; // Production
 
@@ -76,14 +76,26 @@ async function apiRequest(endpoint, options = {}) {
         },
     };
 
+    console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+    if (options.body) {
+        console.log('📤 Request body:', options.body);
+    }
+
     try {
         const response = await fetch(url, { ...defaultOptions, ...options });
+        console.log(`📡 Response status: ${response.status} ${response.statusText}`);
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            console.error('❌ API Error Response:', errorText);
+            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
-        return await response.json();
+
+        const data = await response.json();
+        console.log('📥 Response data:', data);
+        return data;
     } catch (error) {
-        console.error('API request failed:', error);
+        console.error('❌ API request failed:', error);
         throw error;
     }
 }
@@ -117,19 +129,19 @@ function renderProducts() {
         const stockClass = getStockClass(stock);
         const stockText = getStockText(stock);
         const isOutOfStock = stock <= 0;
-        
+
         return `
             <div class="product-card ${isOutOfStock ? 'out-of-stock' : ''}" data-product-id="${product.id}">
                 <div class="product-header">
                     <h3 class="product-name">${product.name}</h3>
                     <div class="product-price">₦${parseFloat(product.default_sell_price).toLocaleString()}</div>
                 </div>
-                
+
                 <div class="product-stock ${stockClass}">
                     <i class="fas ${getStockIcon(stock)}"></i>
                     ${stockText}
                 </div>
-                
+
                 <div class="product-actions">
                     <div class="quantity-controls">
                         <button class="quantity-btn" onclick="decreaseQuantity(${product.id})" ${isOutOfStock ? 'disabled' : ''}>
@@ -161,11 +173,11 @@ function getProductStock(product) {
         4: 20,  // Banana Bread
         5: 15   // Chocolate Cake
     };
-    
+
     // Reduce stock based on cart items
     const cartItem = cart.find(item => item.id === product.id);
     const reservedQuantity = cartItem ? cartItem.quantity : 0;
-    
+
     return (stockMap[product.id] || 10) - reservedQuantity;
 }
 
@@ -193,7 +205,7 @@ function increaseQuantity(productId) {
     const currentQty = parseInt(qtyInput.value);
     const product = products.find(p => p.id === productId);
     const maxStock = getProductStock(product);
-    
+
     if (currentQty < maxStock) {
         qtyInput.value = currentQty + 1;
     }
@@ -202,7 +214,7 @@ function increaseQuantity(productId) {
 function decreaseQuantity(productId) {
     const qtyInput = document.getElementById(`qty-${productId}`);
     const currentQty = parseInt(qtyInput.value);
-    
+
     if (currentQty > 0) {
         qtyInput.value = currentQty - 1;
     }
@@ -212,17 +224,17 @@ function decreaseQuantity(productId) {
 function addToCart(productId) {
     const qtyInput = document.getElementById(`qty-${productId}`);
     const quantity = parseInt(qtyInput.value);
-    
+
     if (quantity <= 0) {
         alert('Please select a quantity first');
         return;
     }
-    
+
     const product = products.find(p => p.id === productId);
     if (!product) return;
-    
+
     const existingItem = cart.find(item => item.id === productId);
-    
+
     if (existingItem) {
         existingItem.quantity += quantity;
     } else {
@@ -233,14 +245,14 @@ function addToCart(productId) {
             quantity: quantity
         });
     }
-    
+
     // Reset quantity input
     qtyInput.value = 0;
-    
+
     // Update UI
     updateCartUI();
     renderProducts(); // Re-render to update stock
-    
+
     // Show success feedback
     showAddToCartFeedback(product.name, quantity);
 }
@@ -252,9 +264,9 @@ function showAddToCartFeedback(productName, quantity) {
         <i class="fas fa-check-circle"></i>
         Added ${quantity}x ${productName} to cart
     `;
-    
+
     document.body.appendChild(feedback);
-    
+
     setTimeout(() => {
         feedback.remove();
     }, 3000);
@@ -282,13 +294,26 @@ function updateCartQuantity(productId, newQuantity) {
 function updateCartUI() {
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
+    // Update cart count in header
     cartCount.textContent = totalItems;
+    cartCount.setAttribute('data-count', totalItems);
+
+    // Update cart total in sidebar
     cartTotal.textContent = totalPrice.toLocaleString();
-    
+
+    // Enable/disable checkout button
     checkoutBtn.disabled = cart.length === 0;
-    
+
+    // Render cart items
     renderCartItems();
+
+    // Show cart automatically when items are added (first item)
+    if (totalItems === 1 && !orderSummary.classList.contains('active')) {
+        setTimeout(() => {
+            toggleOrderSummary();
+        }, 500); // Small delay for better UX
+    }
 }
 
 function renderCartItems() {
@@ -302,7 +327,7 @@ function renderCartItems() {
         `;
         return;
     }
-    
+
     cartItems.innerHTML = cart.map(item => `
         <div class="cart-item">
             <div class="item-details">
@@ -334,7 +359,7 @@ function toggleOrderSummary() {
 
 function proceedToCheckout() {
     if (cart.length === 0) return;
-    
+
     // Populate checkout modal
     populateCheckoutModal();
     checkoutModal.classList.add('active');
@@ -343,16 +368,16 @@ function proceedToCheckout() {
 function populateCheckoutModal() {
     const checkoutItems = document.getElementById('checkout-items');
     const checkoutTotal = document.getElementById('checkout-total');
-    
+
     const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
     checkoutItems.innerHTML = cart.map(item => `
         <div class="checkout-item">
             <span>${item.quantity}x ${item.name}</span>
             <span>₦${(item.price * item.quantity).toLocaleString()}</span>
         </div>
     `).join('');
-    
+
     checkoutTotal.textContent = totalPrice.toLocaleString();
 }
 
@@ -365,60 +390,93 @@ checkoutForm.addEventListener('submit', handleCheckout);
 
 async function handleCheckout(e) {
     e.preventDefault();
-    
-    if (isLoading) return;
-    
+    console.log('🛒 Checkout initiated');
+
+    if (isLoading) {
+        console.log('⚠️ Already processing, ignoring request');
+        return;
+    }
+
     const formData = new FormData(checkoutForm);
     const customerName = formData.get('customerName').trim();
     const phoneNumber = formData.get('phoneNumber').trim();
     const paymentMethod = formData.get('paymentMethod');
-    
+
+    console.log('📝 Form data:', { customerName, phoneNumber, paymentMethod });
+    console.log('🛍️ Cart contents:', cart);
+
     if (!customerName) {
         alert('Please enter your name');
         return;
     }
-    
-    // Check for unique name per day
-    if (await isNameTakenToday(customerName)) {
-        alert('This name has already been used for an order today. Please use a different name or add your last name.');
+
+    if (cart.length === 0) {
+        alert('Your cart is empty. Please add some items before checkout.');
         return;
     }
-    
+
+    // Check for unique name per day
+    console.log('🔍 Checking name availability...');
+    try {
+        if (await isNameTakenToday(customerName)) {
+            alert('This name has already been used for an order today. Please use a different name or add your last name.');
+            return;
+        }
+        console.log('✅ Name is available');
+    } catch (error) {
+        console.warn('⚠️ Name validation failed, proceeding anyway:', error);
+    }
+
     isLoading = true;
     const submitBtn = checkoutForm.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     submitBtn.disabled = true;
-    
+
     try {
         const orderData = {
             customer_name: customerName,
             phone_number: phoneNumber,
             payment_method: paymentMethod,
-            items: cart,
+            items: cart.map(item => ({
+                id: item.id,
+                quantity: item.quantity,
+                price: item.price
+            })),
             total_amount: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-            order_date: new Date().toISOString().split('T')[0],
-            status: 'pending'
+            order_date: new Date().toISOString().split('T')[0]
         };
-        
-        // For now, we'll simulate order creation
-        // In a real implementation, this would call the backend API
-        const orderReference = generateOrderReference();
-        
+
+        console.log('📤 Submitting order data:', orderData);
+
+        // Submit order to backend API
+        const response = await apiRequest('/customer-orders/', {
+            method: 'POST',
+            body: JSON.stringify(orderData)
+        });
+
+        console.log('📥 Order response:', response);
+
+        if (!response.order_reference) {
+            throw new Error('No order reference received from server');
+        }
+
         // Show success modal
-        showOrderSuccess(orderReference, customerName, paymentMethod);
-        
+        showOrderSuccess(response.order_reference, customerName, paymentMethod, response);
+
         // Clear cart
         cart = [];
         updateCartUI();
         renderProducts();
-        
+
         // Close checkout modal
         closeCheckoutModal();
-        
+
+        console.log('✅ Order completed successfully:', response.order_reference);
+
     } catch (error) {
-        console.error('Order submission failed:', error);
-        alert('Failed to place order. Please try again.');
+        console.error('❌ Order submission failed:', error);
+        alert(`Failed to place order: ${error.message}. Please try again.`);
     } finally {
         isLoading = false;
         submitBtn.innerHTML = originalText;
@@ -427,56 +485,61 @@ async function handleCheckout(e) {
 }
 
 async function isNameTakenToday(name) {
-    // For now, we'll use localStorage to track names for the day
-    // In a real implementation, this would check the backend
-    const today = new Date().toISOString().split('T')[0];
-    const todayOrders = JSON.parse(localStorage.getItem(`orders_${today}`) || '[]');
-    
-    return todayOrders.some(order => 
-        order.customer_name.toLowerCase() === name.toLowerCase()
-    );
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await apiRequest(`/customer-orders/?order_date=${today}&customer_name=${encodeURIComponent(name)}`);
+
+        // Check if any orders exist for this name today
+        const orders = response.results || response;
+        return orders.some(order =>
+            order.customer_name.toLowerCase() === name.toLowerCase()
+        );
+    } catch (error) {
+        console.error('Failed to check name availability:', error);
+        // Fallback to localStorage if API fails
+        const today = new Date().toISOString().split('T')[0];
+        const todayOrders = JSON.parse(localStorage.getItem(`orders_${today}`) || '[]');
+
+        return todayOrders.some(order =>
+            order.customer_name.toLowerCase() === name.toLowerCase()
+        );
+    }
 }
 
-function generateOrderReference() {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 1000);
-    return `ORD-${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`;
-}
 
-function showOrderSuccess(orderReference, customerName, paymentMethod) {
+
+function showOrderSuccess(orderReference, customerName, paymentMethod, orderResponse = null) {
     // Populate success modal
     document.getElementById('order-reference').textContent = orderReference;
     document.getElementById('confirmed-name').textContent = customerName;
-    document.getElementById('confirmed-payment').textContent = 
+    document.getElementById('confirmed-payment').textContent =
         paymentMethod === 'pay_now' ? 'Paid online' : 'Pay on collection';
-    
+
     const confirmedItems = document.getElementById('confirmed-items');
     const confirmedTotal = document.getElementById('confirmed-total');
-    
+
+    // Use cart data for display (cart will be cleared after this)
     const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
     confirmedItems.innerHTML = cart.map(item => `
         <div class="confirmed-item">
             <span>${item.quantity}x ${item.name}</span>
             <span>₦${(item.price * item.quantity).toLocaleString()}</span>
         </div>
     `).join('');
-    
+
     confirmedTotal.textContent = totalPrice.toLocaleString();
-    
-    // Store order in localStorage
+
+    // Store order reference in localStorage for customer reference
     const today = new Date().toISOString().split('T')[0];
-    const todayOrders = JSON.parse(localStorage.getItem(`orders_${today}`) || '[]');
-    todayOrders.push({
+    const customerOrders = JSON.parse(localStorage.getItem(`customer_orders_${today}`) || '[]');
+    customerOrders.push({
         reference: orderReference,
         customer_name: customerName,
-        payment_method: paymentMethod,
-        items: [...cart],
-        total: totalPrice,
         timestamp: new Date().toISOString()
     });
-    localStorage.setItem(`orders_${today}`, JSON.stringify(todayOrders));
-    
+    localStorage.setItem(`customer_orders_${today}`, JSON.stringify(customerOrders));
+
     successModal.classList.add('active');
 }
 

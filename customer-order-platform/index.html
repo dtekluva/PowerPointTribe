@@ -32,8 +32,18 @@
     <!-- Header -->
     <header class="header">
         <div class="container">
-            <h1><i class="fas fa-shopping-basket"></i> Sunday Orders</h1>
-            <p class="subtitle">Order online, collect after service</p>
+            <div class="header-content">
+                <div class="header-left">
+                    <h1><i class="fas fa-shopping-basket"></i> Sunday Orders</h1>
+                    <p class="subtitle">Order online, collect after service</p>
+                </div>
+                <div class="header-right">
+                    <button class="cart-btn" onclick="toggleOrderSummary()" id="cart-btn">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="cart-count" id="cart-count">0</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -49,7 +59,7 @@
     <main class="main-content" id="main-content" style="display: none;">
         <div class="container">
             <!-- Order Summary (Cart) -->
-            <div class="order-summary" id="order-summary" style="display: none;">
+            <div class="order-summary" id="order-summary">
                 <div class="summary-header">
                     <h2><i class="fas fa-shopping-cart"></i> Your Order</h2>
                     <button class="btn-close" onclick="toggleOrderSummary()">

@@ -328,6 +328,86 @@ class Giveaway(models.Model):
         ordering = ['-date_given']
 
 
+class CustomerOrder(models.Model):
+    """
+    Customer purchase orders placed through the customer-facing platform
+    """
+    ORDER_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('preparing', 'Preparing'),
+        ('ready', 'Ready for Collection'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    PAYMENT_METHOD_CHOICES = [
+        ('pay_on_collection', 'Pay on Collection'),
+        ('pay_now', 'Pay Now'),
+    ]
+
+    # Order identification
+    order_reference = models.CharField(max_length=20, unique=True)
+    customer_name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=20, blank=True)
+
+    # Order details
+    order_date = models.DateField()
+    total_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
+    status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default='pending')
+
+    # Collection details
+    collection_notes = models.TextField(blank=True, default="After service at green carpet area")
+    collected_at = models.DateTimeField(null=True, blank=True)
+    collected_by = models.CharField(max_length=100, blank=True)  # Staff member who handed over
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.order_reference} - {self.customer_name} (₦{self.total_amount})"
+
+    @property
+    def total_items(self):
+        return sum(item.quantity for item in self.items.all())
+
+    @property
+    def is_collected(self):
+        return self.status == 'completed' and self.collected_at is not None
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class CustomerOrderItem(models.Model):
+    """
+    Individual items in a customer purchase order
+    """
+    order = models.ForeignKey(CustomerOrder, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} for {self.order.order_reference}"
+
+    @property
+    def total_price(self):
+        return self.quantity * self.unit_price
+
+    class Meta:
+        ordering = ['product__name']
+
+
 class Expense(models.Model):
     """
     Tracks operational expenses associated with weekly orders

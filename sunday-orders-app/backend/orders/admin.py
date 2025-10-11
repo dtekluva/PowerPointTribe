@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer, Product, WeeklyOrder, OrderItem, Debt, SalesEntry, Giveaway, Expense
+from .models import Customer, Product, WeeklyOrder, OrderItem, Debt, SalesEntry, Giveaway, Expense, CustomerOrder, CustomerOrderItem
 
 
 @admin.register(Customer)
@@ -67,3 +67,41 @@ class ExpenseAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('order')
+
+
+class CustomerOrderItemInline(admin.TabularInline):
+    model = CustomerOrderItem
+    extra = 0
+    readonly_fields = ['total_price']
+
+
+@admin.register(CustomerOrder)
+class CustomerOrderAdmin(admin.ModelAdmin):
+    list_display = ['order_reference', 'customer_name', 'order_date', 'total_amount', 'payment_method', 'status', 'created_at']
+    list_filter = ['status', 'payment_method', 'order_date', 'created_at']
+    search_fields = ['order_reference', 'customer_name', 'phone_number']
+    readonly_fields = ['order_reference', 'total_items', 'is_collected', 'created_at', 'updated_at']
+    inlines = [CustomerOrderItemInline]
+
+    fieldsets = (
+        ('Order Information', {
+            'fields': ('order_reference', 'customer_name', 'phone_number', 'order_date')
+        }),
+        ('Payment & Amount', {
+            'fields': ('total_amount', 'payment_method')
+        }),
+        ('Status & Collection', {
+            'fields': ('status', 'collection_notes', 'collected_at', 'collected_by')
+        }),
+        ('Summary', {
+            'fields': ('total_items', 'is_collected'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('items__product')

@@ -4,12 +4,12 @@ from rest_framework.response import Response
 from django.db.models import Sum, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .models import Customer, Product, WeeklyOrder, OrderItem, Debt, SalesEntry, Giveaway, Expense
+from .models import Customer, Product, WeeklyOrder, OrderItem, Debt, SalesEntry, Giveaway, Expense, CustomerOrder, CustomerOrderItem
 from .serializers import (
     CustomerSerializer, ProductSerializer, WeeklyOrderSerializer,
     WeeklyOrderCreateSerializer, DebtSerializer, DebtPaymentSerializer,
     SalesEntrySerializer, SalesEntryCreateSerializer, BulkSalesEntrySerializer,
-    GiveawaySerializer, ExpenseSerializer
+    GiveawaySerializer, ExpenseSerializer, CustomerOrderSerializer, CustomerOrderCreateSerializer
 )
 
 
@@ -348,3 +348,131 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         categories = [{'value': choice[0], 'label': choice[1]}
                      for choice in Expense.EXPENSE_CATEGORIES]
         return Response(categories)
+
+
+class CustomerOrderViewSet(viewsets.ModelViewSet):
+    queryset = CustomerOrder.objects.all()
+
+    def get_serializer_class(self):
+        if self.action in ['create']:
+            return CustomerOrderCreateSerializer
+        return CustomerOrderSerializer
+
+    def create(self, request, *args, **kwargs):
+        """Override create to return full order data after creation"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+
+        # Return the full order data using the read serializer
+        read_serializer = CustomerOrderSerializer(order)
+        headers = self.get_success_headers(read_serializer.data)
+        return Response(read_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def get_queryset(self):
+        queryset = CustomerOrder.objects.all()
+
+        # Filter by date range
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            queryset = queryset.filter(order_date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(order_date__lte=end_date)
+
+        # Filter by status
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+
+        # Filter by customer name
+        customer_name = self.request.query_params.get('customer_name')
+        if customer_name:
+            queryset = queryset.filter(customer_name__icontains=customer_name)
+
+        # Filter by today's orders
+        today = self.request.query_params.get('today')
+        if today == 'true':
+            today_date = timezone.now().date()
+            queryset = queryset.filter(order_date=today_date)
+
+        return queryset.order_by('-created_at')
+
+    @action(detail=True, methods=['post'])
+    def update_status(self, request, pk=None):
+        """Update order status"""
+        order = self.get_object()
+        new_status = request.data.get('status')
+
+        if new_status not in dict(CustomerOrder.ORDER_STATUS_CHOICES):
+            return Response(
+                {'error': 'Invalid status'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        order.status = new_status
+
+        # If marking as completed, record collection details
+        if new_status == 'completed':
+            order.collected_at = timezone.now()
+            order.collected_by = request.data.get('collected_by', '')
+
+        order.save()
+
+        serializer = self.get_serializer(order)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def status_counts(self, request):
+        """Get count of orders by status"""
+        from django.db.models import Count
+
+        # Get today's date for filtering
+        today = timezone.now().date()
+
+        # Count by status for today
+        today_counts = CustomerOrder.objects.filter(
+            order_date=today
+        ).values('status').annotate(
+            count=Count('id')
+        ).order_by('status')
+
+        # Count by status for all time
+        all_counts = CustomerOrder.objects.values('status').annotate(
+            count=Count('id')
+        ).order_by('status')
+
+        return Response({
+            'today': {item['status']: item['count'] for item in today_counts},
+            'all_time': {item['status']: item['count'] for item in all_counts}
+        })
+
+    @action(detail=False, methods=['get'])
+    def daily_summary(self, request):
+        """Get daily order summary"""
+        date = request.query_params.get('date', timezone.now().date())
+
+        orders = CustomerOrder.objects.filter(order_date=date)
+
+        summary = {
+            'date': date,
+            'total_orders': orders.count(),
+            'total_revenue': orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0,
+            'total_items': sum(order.total_items for order in orders),
+            'status_breakdown': {},
+            'payment_method_breakdown': {}
+        }
+
+        # Status breakdown
+        for status_choice in CustomerOrder.ORDER_STATUS_CHOICES:
+            status_code = status_choice[0]
+            count = orders.filter(status=status_code).count()
+            summary['status_breakdown'][status_code] = count
+
+        # Payment method breakdown
+        for payment_choice in CustomerOrder.PAYMENT_METHOD_CHOICES:
+            payment_code = payment_choice[0]
+            count = orders.filter(payment_method=payment_code).count()
+            summary['payment_method_breakdown'][payment_code] = count
+
+        return Response(summary)

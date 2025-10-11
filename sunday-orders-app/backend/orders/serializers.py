@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Customer, Product, WeeklyOrder, OrderItem, Debt, SalesEntry, Giveaway, Expense
+from .models import Customer, Product, WeeklyOrder, OrderItem, Debt, SalesEntry, Giveaway, Expense, CustomerOrder, CustomerOrderItem
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -233,3 +233,104 @@ class BulkSalesEntrySerializer(serializers.Serializer):
                 raise serializers.ValidationError(f"Invalid data format: {str(e)}")
 
         return validated_entries
+
+
+class CustomerOrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    total_price = serializers.ReadOnlyField()
+
+    class Meta:
+        model = CustomerOrderItem
+        fields = ['id', 'product', 'product_name', 'quantity', 'unit_price', 'total_price']
+
+
+class CustomerOrderSerializer(serializers.ModelSerializer):
+    items = CustomerOrderItemSerializer(many=True, read_only=True)
+    total_items = serializers.ReadOnlyField()
+    is_collected = serializers.ReadOnlyField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
+
+    class Meta:
+        model = CustomerOrder
+        fields = [
+            'id', 'order_reference', 'customer_name', 'phone_number',
+            'order_date', 'total_amount', 'payment_method', 'payment_method_display',
+            'status', 'status_display', 'collection_notes', 'collected_at', 'collected_by',
+            'created_at', 'updated_at', 'items', 'total_items', 'is_collected'
+        ]
+        read_only_fields = ['order_reference', 'created_at', 'updated_at']
+
+
+class CustomerOrderCreateSerializer(serializers.ModelSerializer):
+    items = serializers.ListField(write_only=True)
+
+    class Meta:
+        model = CustomerOrder
+        fields = [
+            'customer_name', 'phone_number', 'order_date', 'total_amount',
+            'payment_method', 'collection_notes', 'items'
+        ]
+
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError("Order must contain at least one item")
+
+        validated_items = []
+        for item_data in value:
+            try:
+                product_id = item_data.get('id') or item_data.get('product_id')
+                quantity = int(item_data.get('quantity', 0))
+                price = float(item_data.get('price') or item_data.get('unit_price', 0))
+
+                if quantity <= 0:
+                    raise serializers.ValidationError("Quantity must be greater than 0")
+                if price <= 0:
+                    raise serializers.ValidationError("Price must be greater than 0")
+
+                # Validate product exists
+                try:
+                    product = Product.objects.get(id=product_id, is_active=True)
+                except Product.DoesNotExist:
+                    raise serializers.ValidationError(f"Product {product_id} not found or inactive")
+
+                validated_items.append({
+                    'product': product,
+                    'quantity': quantity,
+                    'unit_price': price
+                })
+            except (ValueError, TypeError) as e:
+                raise serializers.ValidationError(f"Invalid item data: {str(e)}")
+
+        return validated_items
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+
+        # Generate unique order reference
+        import time
+        import random
+        timestamp = str(int(time.time()))[-6:]
+        random_num = str(random.randint(100, 999))
+        order_reference = f"ORD-{timestamp}{random_num}"
+
+        # Ensure uniqueness
+        while CustomerOrder.objects.filter(order_reference=order_reference).exists():
+            random_num = str(random.randint(100, 999))
+            order_reference = f"ORD-{timestamp}{random_num}"
+
+        validated_data['order_reference'] = order_reference
+
+        # Create the order
+        order = CustomerOrder.objects.create(**validated_data)
+
+        # Create order items
+        for item_data in items_data:
+            CustomerOrderItem.objects.create(
+                order=order,
+                product=item_data['product'],
+                quantity=item_data['quantity'],
+                unit_price=item_data['unit_price']
+            )
+
+        return order
