@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Sunday Orders - Place Your Order</title>
+
+    <!-- Meta tags for better mobile experience -->
+    <meta name="description" content="Order your favorite Sunday treats online and collect after service. Avoid the queue and order ahead!">
+    <meta name="keywords" content="sunday orders, church, bakery, online ordering, collection">
+    <meta name="author" content="Sunday Orders Team">
+
+    <!-- Mobile app-like experience -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Sunday Orders">
+
+    <!-- Theme colors -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="msapplication-navbutton-color" content="#667eea">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#667eea">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1><i class="fas fa-shopping-basket"></i> Sunday Orders</h1>
+            <p class="subtitle">Order online, collect after service</p>
+        </div>
+    </header>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading products...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content" style="display: none;">
+        <div class="container">
+            <!-- Order Summary (Cart) -->
+            <div class="order-summary" id="order-summary" style="display: none;">
+                <div class="summary-header">
+                    <h2><i class="fas fa-shopping-cart"></i> Your Order</h2>
+                    <button class="btn-close" onclick="toggleOrderSummary()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="summary-content">
+                    <div id="cart-items"></div>
+                    <div class="summary-total">
+                        <div class="total-line">
+                            <span>Total: ₦<span id="cart-total">0</span></span>
+                        </div>
+                    </div>
+                    <div class="summary-actions">
+                        <button class="btn btn-secondary" onclick="toggleOrderSummary()">
+                            Continue Shopping
+                        </button>
+                        <button class="btn btn-primary" onclick="proceedToCheckout()" id="checkout-btn" disabled>
+                            Proceed to Checkout
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Section -->
+            <section class="products-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-cookie-bite"></i> Available Products</h2>
+                    <div class="cart-toggle">
+                        <button class="btn btn-outline" onclick="toggleOrderSummary()" id="cart-btn">
+                            <i class="fas fa-shopping-cart"></i>
+                            Cart (<span id="cart-count">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="products-grid" id="products-grid">
+                    <!-- Products will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Checkout Modal -->
+            <div class="modal" id="checkout-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-clipboard-check"></i> Complete Your Order</h3>
+                        <button class="btn-close" onclick="closeCheckoutModal()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="checkout-form">
+                            <div class="form-group">
+                                <label for="customer-name">
+                                    <i class="fas fa-user"></i> Your Name *
+                                </label>
+                                <input type="text" id="customer-name" name="customerName" required
+                                       placeholder="Enter your full name">
+                                <small class="form-help">This will be used to identify your order at collection</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="phone-number">
+                                    <i class="fas fa-phone"></i> Phone Number (Optional)
+                                </label>
+                                <input type="tel" id="phone-number" name="phoneNumber"
+                                       placeholder="080XXXXXXXX">
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <i class="fas fa-credit-card"></i> Payment Method *
+                                </label>
+                                <div class="payment-options">
+                                    <label class="radio-option">
+                                        <input type="radio" name="paymentMethod" value="pay_on_collection" checked>
+                                        <span class="radio-custom"></span>
+                                        <div class="option-content">
+                                            <strong>Pay on Collection</strong>
+                                            <small>Pay with cash or card when you collect your order</small>
+                                        </div>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="paymentMethod" value="pay_now">
+                                        <span class="radio-custom"></span>
+                                        <div class="option-content">
+                                            <strong>Pay Now (Online)</strong>
+                                            <small>Pay securely online now</small>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="order-review">
+                                <h4>Order Summary</h4>
+                                <div id="checkout-items"></div>
+                                <div class="checkout-total">
+                                    <strong>Total: ₦<span id="checkout-total">0</span></strong>
+                                </div>
+                            </div>
+
+                            <div class="collection-info">
+                                <div class="info-box">
+                                    <i class="fas fa-clock"></i>
+                                    <div>
+                                        <strong>Collection Time</strong>
+                                        <p>After service at the green carpet area</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closeCheckoutModal()">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check"></i> Place Order
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Modal -->
+            <div class="modal" id="success-modal">
+                <div class="modal-content">
+                    <div class="modal-header success">
+                        <h3><i class="fas fa-check-circle"></i> Order Confirmed!</h3>
+                    </div>
+                    <div class="modal-body">
+                        <div class="success-content">
+                            <div class="order-reference">
+                                <h4>Order Reference</h4>
+                                <div class="reference-code" id="order-reference">
+                                    #ORD-12345
+                                </div>
+                            </div>
+
+                            <div class="collection-details">
+                                <h4>Collection Details</h4>
+                                <div class="detail-item">
+                                    <i class="fas fa-user"></i>
+                                    <span>Name: <strong id="confirmed-name">John Doe</strong></span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Collection: <strong>After service at green carpet</strong></span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    <span>Payment: <strong id="confirmed-payment">Pay on collection</strong></span>
+                                </div>
+                            </div>
+
+                            <div class="order-items">
+                                <h4>Your Order</h4>
+                                <div id="confirmed-items"></div>
+                                <div class="confirmed-total">
+                                    <strong>Total: ₦<span id="confirmed-total">0</span></strong>
+                                </div>
+                            </div>
+
+                            <div class="important-note">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <p><strong>Important:</strong> Please show this confirmation or mention your name and order reference when collecting your order.</p>
+                            </div>
+                        </div>
+
+                        <div class="success-actions">
+                            <button class="btn btn-secondary" onclick="takeScreenshot()">
+                                <i class="fas fa-camera"></i> Save Screenshot
+                            </button>
+                            <button class="btn btn-primary" onclick="startNewOrder()">
+                                <i class="fas fa-plus"></i> Place Another Order
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Sunday Orders. Made with ❤️ for our church community.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Excel Export - Sunday Orders</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        button { padding: 10px 20px; margin: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #5a67d8; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Excel Export Test - Sunday Orders</h1>
+
+    <div class="test-section">
+        <h2>Basic Excel Export Test</h2>
+        <button onclick="testBasicExport()">Test Basic Excel Export</button>
+        <p>Tests the basic SheetJS functionality with simple data.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Sunday Orders Format Test</h2>
+        <button onclick="testSundayOrdersFormat()">Test Sunday Orders Format</button>
+        <p>Tests the exact format used in the Sunday Orders application.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Multi-Week Test</h2>
+        <button onclick="testMultiWeekExport()">Test Multi-Week Export</button>
+        <p>Tests export with multiple weeks of data.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Sheet Name Length Test</h2>
+        <button onclick="testSheetNameLength()">Test Sheet Name Length</button>
+        <p>Tests that sheet names are within Excel's 31-character limit.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Complete Data Structure Test</h2>
+        <button onclick="testCompleteDataStructure()">Test Complete Data with Debtors, Giveaways & Logistics</button>
+        <p>Tests the full Excel export with all sections: Sales, Debtors, Giveaways, and Logistics.</p>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        function logResult(message, isSuccess = true) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = isSuccess ? 'success' : 'error';
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            results.appendChild(div);
+        }
+
+        function testBasicExport() {
+            try {
+                // Create test data
+                const testData = [
+                    ['Date', 'Product Name', 'Planned Qty', 'Actual Qty', 'Unit Price', 'Planned Revenue', 'Actual Revenue'],
+                    ['2025-01-01', 'Sugar Donuts', 50, 45, 200, 10000, 9000],
+                    ['2025-01-01', 'Sausage Roll', 30, 28, 300, 9000, 8400],
+                    ['2025-01-01', 'Jam Donuts', 25, 25, 250, 6250, 6250],
+                    [],
+                    ['TOTALS', '', 105, 98, '', 25250, 23650]
+                ];
+
+                // Create workbook
+                const workbook = XLSX.utils.book_new();
+                const worksheet = XLSX.utils.aoa_to_sheet(testData);
+
+                // Auto-size columns
+                const colWidths = testData[0].map(() => ({ wch: 15 }));
+                worksheet['!cols'] = colWidths;
+
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Test Week');
+
+                // Download
+                XLSX.writeFile(workbook, 'Sunday_Orders_Basic_Test.xlsx');
+
+                logResult('Basic Excel export test completed successfully!');
+            } catch (error) {
+                logResult(`Basic Excel export test failed: ${error.message}`, false);
+            }
+        }
+
+        function testSundayOrdersFormat() {
+            try {
+                // Simulate Sunday Orders data structure
+                const mockOrders = [
+                    {
+                        id: 1,
+                        date: '2025-01-05',
+                        items: [
+                            {
+                                id: 1,
+                                product_name: 'Sugar Donuts',
+                                quantity: 50,
+                                sell_price: 200,
+                                cost_price: 100,
+                                sales: {
+                                    quantity_sold: 45,
+                                    actual_sell_price: 200,
+                                    quantity_remaining: 5
+                                }
+                            },
+                            {
+                                id: 2,
+                                product_name: 'Sausage Roll',
+                                quantity: 30,
+                                sell_price: 300,
+                                cost_price: 150,
+                                sales: {
+                                    quantity_sold: 28,
+                                    actual_sell_price: 300,
+                                    quantity_remaining: 2
+                                }
+                            }
+                        ]
+                    }
+                ];
+
+                // Use the same logic as the main application
+                const headers = [
+                    'Date',
+                    'Product Name',
+                    'Planned Quantity',
+                    'Actual Quantity Sold',
+                    'Unit Price (₦)',
+                    'Planned Revenue (₦)',
+                    'Actual Revenue (₦)',
+                    'Unit Cost (₦)',
+                    'Planned Profit (₦)',
+                    'Actual Profit (₦)',
+                    'Stock Remaining'
+                ];
+
+                const data = [headers];
+
+                mockOrders.forEach(order => {
+                    const orderDate = order.date;
+
+                    order.items.forEach(item => {
+                        const salesData = item.sales || {};
+
+                        const plannedQty = item.quantity || 0;
+                        const actualQty = salesData.quantity_sold || 0;
+                        const unitPrice = item.sell_price || 0;
+                        const actualUnitPrice = salesData.actual_sell_price || unitPrice;
+                        const unitCost = item.cost_price || 0;
+
+                        const plannedRevenue = plannedQty * unitPrice;
+                        const actualRevenue = actualQty * actualUnitPrice;
+                        const plannedProfit = plannedQty * (unitPrice - unitCost);
+                        const actualProfit = actualQty * (actualUnitPrice - unitCost);
+                        const stockRemaining = salesData.quantity_remaining || (plannedQty - actualQty);
+
+                        data.push([
+                            orderDate,
+                            item.product_name,
+                            plannedQty,
+                            actualQty,
+                            unitPrice,
+                            plannedRevenue,
+                            actualRevenue,
+                            unitCost,
+                            plannedProfit,
+                            actualProfit,
+                            stockRemaining
+                        ]);
+                    });
+                });
+
+                // Add summary row
+                const summaryRow = [
+                    'TOTALS',
+                    '',
+                    data.slice(1).reduce((sum, row) => sum + (row[2] || 0), 0),
+                    data.slice(1).reduce((sum, row) => sum + (row[3] || 0), 0),
+                    '',
+                    data.slice(1).reduce((sum, row) => sum + (row[5] || 0), 0),
+                    data.slice(1).reduce((sum, row) => sum + (row[6] || 0), 0),
+                    '',
+                    data.slice(1).reduce((sum, row) => sum + (row[8] || 0), 0),
+                    data.slice(1).reduce((sum, row) => sum + (row[9] || 0), 0),
+                    ''
+                ];
+
+                data.push([]);
+                data.push(summaryRow);
+
+                // Create workbook
+                const workbook = XLSX.utils.book_new();
+                const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+                // Auto-size columns
+                const colWidths = headers.map(() => ({ wch: 18 }));
+                worksheet['!cols'] = colWidths;
+
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Week Jan 05-Jan 11');
+
+                // Download
+                XLSX.writeFile(workbook, 'Sunday_Orders_Format_Test.xlsx');
+
+                logResult('Sunday Orders format test completed successfully!');
+            } catch (error) {
+                logResult(`Sunday Orders format test failed: ${error.message}`, false);
+            }
+        }
+
+        function testMultiWeekExport() {
+            try {
+                // Create workbook with multiple sheets
+                const workbook = XLSX.utils.book_new();
+
+                // Week 1 data
+                const week1Data = [
+                    ['Date', 'Product Name', 'Planned Qty', 'Actual Qty', 'Unit Price', 'Planned Revenue', 'Actual Revenue'],
+                    ['2025-01-05', 'Sugar Donuts', 50, 45, 200, 10000, 9000],
+                    ['2025-01-05', 'Sausage Roll', 30, 28, 300, 9000, 8400],
+                    [],
+                    ['TOTALS', '', 80, 73, '', 19000, 17400]
+                ];
+
+                // Week 2 data
+                const week2Data = [
+                    ['Date', 'Product Name', 'Planned Qty', 'Actual Qty', 'Unit Price', 'Planned Revenue', 'Actual Revenue'],
+                    ['2025-01-12', 'Sugar Donuts', 60, 55, 200, 12000, 11000],
+                    ['2025-01-12', 'Jam Donuts', 25, 25, 250, 6250, 6250],
+                    [],
+                    ['TOTALS', '', 85, 80, '', 18250, 17250]
+                ];
+
+                // Create worksheets
+                const worksheet1 = XLSX.utils.aoa_to_sheet(week1Data);
+                const worksheet2 = XLSX.utils.aoa_to_sheet(week2Data);
+
+                // Auto-size columns
+                const colWidths = week1Data[0].map(() => ({ wch: 15 }));
+                worksheet1['!cols'] = colWidths;
+                worksheet2['!cols'] = colWidths;
+
+                // Add sheets to workbook
+                // Use shorter sheet names (Excel limit is 31 chars)
+                XLSX.utils.book_append_sheet(workbook, worksheet1, 'Week Jan 05-Jan 11');
+                XLSX.utils.book_append_sheet(workbook, worksheet2, 'Week Jan 12-Jan 18');
+
+                // Download
+                XLSX.writeFile(workbook, 'Sunday_Orders_MultiWeek_Test.xlsx');
+
+                logResult('Multi-week export test completed successfully!');
+            } catch (error) {
+                logResult(`Multi-week export test failed: ${error.message}`, false);
+            }
+        }
+
+        function testSheetNameLength() {
+            try {
+                // Test various sheet name lengths
+                const testNames = [
+                    'Week Jan 05-Jan 11',  // 18 chars - should work
+                    'Week Jan 05-Jan 11, 2025',  // 24 chars - should work
+                    'Week January 05 to January 11',  // 30 chars - should work
+                    'Week January 05 to January 11, 2025'  // 36 chars - should fail
+                ];
+
+                const workbook = XLSX.utils.book_new();
+                const testData = [['Test'], ['Data']];
+
+                testNames.forEach((name, index) => {
+                    try {
+                        const worksheet = XLSX.utils.aoa_to_sheet(testData);
+                        XLSX.utils.book_append_sheet(workbook, worksheet, name);
+                        logResult(`Sheet name "${name}" (${name.length} chars) - SUCCESS`);
+                    } catch (error) {
+                        logResult(`Sheet name "${name}" (${name.length} chars) - FAILED: ${error.message}`, false);
+                    }
+                });
+
+                // Test our actual format
+                const formatDateShort = (dateString) => {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                };
+
+                const startDate = '2025-01-05';
+                const endDate = '2025-01-11';
+                const actualSheetName = `Week ${formatDateShort(startDate)}-${formatDateShort(endDate)}`;
+
+                try {
+                    const worksheet = XLSX.utils.aoa_to_sheet(testData);
+                    XLSX.utils.book_append_sheet(workbook, worksheet, actualSheetName);
+                    logResult(`Actual format "${actualSheetName}" (${actualSheetName.length} chars) - SUCCESS`);
+                } catch (error) {
+                    logResult(`Actual format "${actualSheetName}" (${actualSheetName.length} chars) - FAILED: ${error.message}`, false);
+                }
+
+                logResult('Sheet name length test completed!');
+            } catch (error) {
+                logResult(`Sheet name length test failed: ${error.message}`, false);
+            }
+        }
+
+        function testCompleteDataStructure() {
+            try {
+                // Simulate complete Sunday Orders data with all sections
+                const mockOrders = [
+                    {
+                        id: 1,
+                        date: '2025-01-05',
+                        items: [
+                            {
+                                id: 1,
+                                product_name: 'Sugar Donuts',
+                                quantity: 50,
+                                sell_price: 200,
+                                cost_price: 100,
+                                sales: {
+                                    quantity_sold: 45,
+                                    actual_sell_price: 200,
+                                    quantity_remaining: 5
+                                }
+                            }
+                        ],
+                        debts: [
+                            {
+                                customer_name: 'John Doe',
+                                amount: 5000,
+                                amount_paid: 2000,
+                                outstanding_amount: 3000,
+                                status: 'partial',
+                                date_created: '2025-01-05',
+                                description: 'Order payment pending'
+                            }
+                        ],
+                        giveaways: [
+                            {
+                                product_name: 'Sugar Donuts',
+                                quantity: 5,
+                                cost_price: 100,
+                                total_cost: 500,
+                                recipient: 'Church Pastor',
+                                date_given: '2025-01-05',
+                                notes: 'Sunday service giveaway'
+                            }
+                        ],
+                        expenses: [
+                            {
+                                category: 'transport',
+                                category_display: 'Transportation',
+                                description: 'Delivery to church',
+                                amount: 1500,
+                                date: '2025-01-05',
+                                notes: 'Fuel and driver payment'
+                            }
+                        ]
+                    }
+                ];
+
+                // Create comprehensive test data
+                const data = [];
+
+                // Sales section
+                data.push(['=== SALES DATA ===']);
+                data.push([]);
+                data.push(['Date', 'Product Name', 'Planned Qty', 'Actual Qty', 'Unit Price', 'Planned Revenue', 'Actual Revenue', 'Unit Cost', 'Planned Profit', 'Actual Profit', 'Stock Remaining']);
+                data.push(['2025-01-05', 'Sugar Donuts', 50, 45, 200, 10000, 9000, 100, 5000, 4500, 5]);
+                data.push([]);
+                data.push(['SALES TOTALS', '', 50, 45, '', 10000, 9000, '', 5000, 4500, '']);
+
+                // Debtors section
+                data.push([]);
+                data.push([]);
+                data.push(['=== DEBTORS ===']);
+                data.push([]);
+                data.push(['Order Date', 'Customer Name', 'Debt Amount (₦)', 'Amount Paid (₦)', 'Outstanding (₦)', 'Status', 'Date Created', 'Description']);
+                data.push(['2025-01-05', 'John Doe', 5000, 2000, 3000, 'PARTIAL', '2025-01-05', 'Order payment pending']);
+                data.push([]);
+                data.push(['DEBT TOTALS', '1 customers', 5000, 2000, 3000, '', '', '']);
+
+                // Giveaways section
+                data.push([]);
+                data.push([]);
+                data.push(['=== GIVEAWAYS ===']);
+                data.push([]);
+                data.push(['Order Date', 'Product Name', 'Quantity', 'Unit Cost (₦)', 'Total Cost (₦)', 'Recipient', 'Date Given', 'Notes']);
+                data.push(['2025-01-05', 'Sugar Donuts', 5, 100, 500, 'Church Pastor', '2025-01-05', 'Sunday service giveaway']);
+                data.push([]);
+                data.push(['GIVEAWAY TOTALS', '1 items', 5, '', 500, '', '', '']);
+
+                // Logistics section
+                data.push([]);
+                data.push([]);
+                data.push(['=== LOGISTICS & EXPENSES ===']);
+                data.push([]);
+                data.push(['Order Date', 'Category', 'Description', 'Amount (₦)', 'Expense Date', 'Notes']);
+                data.push(['2025-01-05', 'Transportation', 'Delivery to church', 1500, '2025-01-05', 'Fuel and driver payment']);
+                data.push([]);
+                data.push(['EXPENSE TOTALS', '1 categories', '1 expenses', 1500, '', '']);
+                data.push(['', 'Transportation', '', 1500, '', '']);
+
+                // Create workbook
+                const workbook = XLSX.utils.book_new();
+                const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+                // Auto-size columns
+                const colWidths = data[0] ? data[0].map(() => ({ wch: 20 })) : [];
+                worksheet['!cols'] = colWidths;
+
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Week Jan 05-Jan 11');
+
+                // Download
+                XLSX.writeFile(workbook, 'Sunday_Orders_Complete_Test.xlsx');
+
+                logResult('Complete data structure test completed successfully!');
+                logResult('Excel file includes: Sales Data, Debtors, Giveaways, and Logistics sections');
+            } catch (error) {
+                logResult(`Complete data structure test failed: ${error.message}`, false);
+            }
+        }
+
+        // Test SheetJS availability on page load
+        window.addEventListener('load', function() {
+            if (typeof XLSX !== 'undefined') {
+                logResult('SheetJS library loaded successfully!');
+            } else {
+                logResult('SheetJS library failed to load!', false);
+            }
+        });
+    </script>
+</body>
+</html>

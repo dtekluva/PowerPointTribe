@@ -116,10 +116,23 @@ Your dashboard includes:
 
 ## 🛠️ Troubleshooting
 
-**If API calls fail:**
-- Check browser console for CORS errors
-- Verify backend is running at `https://ppt.giftoria.cc/api/`
-- Test API directly: `curl https://ppt.giftoria.cc/api/customers/`
+**If API calls fail with CORS errors:**
+1. **Update CORS settings** for your new Netlify URL:
+   ```bash
+   cd sunday-orders-app/frontend
+   ./update-cors.sh https://your-app.netlify.app
+   ```
+
+2. **Manual CORS update** (if script doesn't work):
+   - SSH to server: `ssh root@165.227.67.116`
+   - Edit: `/home/PowerPointTribe/sunday-orders-app/backend/sunday_orders_backend/production_settings.py`
+   - Add your Netlify URL to `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS`
+   - Restart: `systemctl restart sunday-orders.service`
+
+3. **CORS is handled by both Nginx and Django:**
+   - **Nginx**: Handles OPTIONS preflight requests
+   - **Django**: Handles actual API requests with CORS headers
+   - Both are configured to work with your Netlify domain
 
 **If deployment fails:**
 - Ensure you're in the `sunday-orders-app/frontend` directory
@@ -129,3 +142,4 @@ Your dashboard includes:
 **For custom domain:**
 - Add your domain in Netlify dashboard
 - Update DNS settings as instructed by Netlify
+- Update CORS settings with your custom domain

@@ -1,7 +1,7 @@
 {
   "name": "sunday-orders-frontend",
-  "version": "1.0.0",
-  "description": "Sunday Orders Dashboard Frontend - Deployed on Netlify",
+  "version": "1.1.0",
+  "description": "Sunday Orders Dashboard Frontend with Date Filter and Excel Export - Deployed on Netlify",
   "main": "index.html",
   "scripts": {
     "dev": "python -m http.server 3000",

@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunday Orders Dashboard</title>
-    <link rel="stylesheet" href="styles.css?v=2.4">
+    <link rel="stylesheet" href="styles.css?v=2.5">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SheetJS for Excel export functionality -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -133,6 +135,52 @@
                         <button class="btn btn-outline" onclick="copyFromPrevious()">
                             <i class="fas fa-copy"></i> Copy Previous
                         </button>
+                        <button class="btn btn-success" onclick="exportToExcel()" id="export-excel-btn">
+                            <i class="fas fa-file-excel"></i> Export to Excel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Date Filter Component -->
+                <div class="date-filter-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-calendar-alt"></i> Date Filter</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="date-filter-controls">
+                                <div class="date-navigation">
+                                    <button class="btn btn-outline btn-sm" onclick="navigateWeek(-1)" id="prev-week-btn">
+                                        <i class="fas fa-chevron-left"></i> Previous Week
+                                    </button>
+                                    <button class="btn btn-primary btn-sm" onclick="goToCurrentWeek()" id="current-week-btn">
+                                        <i class="fas fa-calendar-day"></i> Current Week
+                                    </button>
+                                    <button class="btn btn-outline btn-sm" onclick="navigateWeek(1)" id="next-week-btn">
+                                        <i class="fas fa-chevron-right"></i> Next Week
+                                    </button>
+                                </div>
+
+                                <div class="date-range-selector">
+                                    <div class="date-input-group">
+                                        <label for="start-date">From:</label>
+                                        <input type="date" id="start-date" onchange="updateDateFilter()">
+                                    </div>
+                                    <div class="date-input-group">
+                                        <label for="end-date">To:</label>
+                                        <input type="date" id="end-date" onchange="updateDateFilter()">
+                                    </div>
+                                    <button class="btn btn-secondary btn-sm" onclick="resetDateFilter()">
+                                        <i class="fas fa-refresh"></i> Reset
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="current-filter-display">
+                                <span class="filter-label">Showing:</span>
+                                <span class="filter-value" id="current-date-range">All Orders</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

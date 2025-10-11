@@ -1,0 +1,20 @@
+{
+  "name": "sunday-orders-customer-platform",
+  "version": "1.0.0",
+  "description": "Customer-facing order platform for Sunday Orders - Deployed on Netlify",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 3001",
+    "build": "echo 'No build step required for static HTML'",
+    "start": "python -m http.server 3001",
+    "deploy": "netlify deploy --prod --dir=."
+  },
+  "keywords": ["orders", "customer", "church", "bakery", "netlify", "ecommerce"],
+  "author": "Sunday Orders Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:dtekluva/PowerPointTribe.git"
+  },
+  "homepage": "https://order.tribesheart.netlify.app"
+}

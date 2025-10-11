@@ -12,6 +12,11 @@ let products = [];
 let orders = [];
 let debts = [];
 
+// Date filter state
+let currentStartDate = null;
+let currentEndDate = null;
+let filteredOrders = [];
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
@@ -189,8 +194,17 @@ async function loadOrdersData() {
     try {
         const ordersData = await apiRequest('/orders/');
         orders = ordersData.results || ordersData;
-        updateOrdersCalendar(orders);
-        updateOrdersSummary(orders);
+
+        // Initialize date filter if not already set
+        if (!currentStartDate && !currentEndDate) {
+            initializeDateFilter();
+        }
+
+        // Apply current date filter
+        applyDateFilter();
+
+        updateOrdersCalendar(filteredOrders);
+        updateOrdersSummary(filteredOrders);
     } catch (error) {
         console.error('Failed to load orders data:', error);
     }
@@ -297,6 +311,592 @@ function updateOrdersCalendar(orders) {
     `).join('');
 
     container.innerHTML = `<div class="orders-grid">${ordersHtml}</div>`;
+}
+
+// Date Filter Functions
+function initializeDateFilter() {
+    // Set default to current week
+    const today = new Date();
+    const startOfWeek = getStartOfWeek(today);
+    const endOfWeek = getEndOfWeek(startOfWeek);
+
+    currentStartDate = startOfWeek;
+    currentEndDate = endOfWeek;
+
+    // Update UI
+    updateDateFilterUI();
+}
+
+function getStartOfWeek(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day; // Sunday is 0
+    return new Date(d.setDate(diff));
+}
+
+function getEndOfWeek(startDate) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + 6);
+    return d;
+}
+
+function updateDateFilterUI() {
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    const currentRangeDisplay = document.getElementById('current-date-range');
+
+    if (startDateInput && currentStartDate) {
+        startDateInput.value = formatDateForInput(currentStartDate);
+    }
+    if (endDateInput && currentEndDate) {
+        endDateInput.value = formatDateForInput(currentEndDate);
+    }
+
+    if (currentRangeDisplay) {
+        if (currentStartDate && currentEndDate) {
+            const startStr = formatDate(currentStartDate);
+            const endStr = formatDate(currentEndDate);
+            currentRangeDisplay.textContent = `${startStr} to ${endStr}`;
+        } else {
+            currentRangeDisplay.textContent = 'All Orders';
+        }
+    }
+}
+
+function formatDateForInput(date) {
+    return date.toISOString().split('T')[0];
+}
+
+function applyDateFilter() {
+    if (!currentStartDate || !currentEndDate) {
+        filteredOrders = [...orders];
+        return;
+    }
+
+    filteredOrders = orders.filter(order => {
+        const orderDate = new Date(order.date);
+        return orderDate >= currentStartDate && orderDate <= currentEndDate;
+    });
+}
+
+function updateDateFilter() {
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+
+    if (startDateInput.value) {
+        currentStartDate = new Date(startDateInput.value);
+    }
+    if (endDateInput.value) {
+        currentEndDate = new Date(endDateInput.value);
+    }
+
+    // Ensure end date is not before start date
+    if (currentStartDate && currentEndDate && currentEndDate < currentStartDate) {
+        currentEndDate = new Date(currentStartDate);
+        endDateInput.value = formatDateForInput(currentEndDate);
+    }
+
+    applyDateFilter();
+    updateDateFilterUI();
+    updateOrdersCalendar(filteredOrders);
+    updateOrdersSummary(filteredOrders);
+}
+
+function navigateWeek(direction) {
+    if (!currentStartDate || !currentEndDate) {
+        initializeDateFilter();
+        return;
+    }
+
+    const daysToAdd = direction * 7;
+    currentStartDate.setDate(currentStartDate.getDate() + daysToAdd);
+    currentEndDate.setDate(currentEndDate.getDate() + daysToAdd);
+
+    applyDateFilter();
+    updateDateFilterUI();
+    updateOrdersCalendar(filteredOrders);
+    updateOrdersSummary(filteredOrders);
+}
+
+function goToCurrentWeek() {
+    const today = new Date();
+    currentStartDate = getStartOfWeek(today);
+    currentEndDate = getEndOfWeek(currentStartDate);
+
+    applyDateFilter();
+    updateDateFilterUI();
+    updateOrdersCalendar(filteredOrders);
+    updateOrdersSummary(filteredOrders);
+}
+
+function resetDateFilter() {
+    currentStartDate = null;
+    currentEndDate = null;
+
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+
+    if (startDateInput) startDateInput.value = '';
+    if (endDateInput) endDateInput.value = '';
+
+    applyDateFilter();
+    updateDateFilterUI();
+    updateOrdersCalendar(filteredOrders);
+    updateOrdersSummary(filteredOrders);
+}
+
+// Excel Export Functions
+async function exportToExcel() {
+    const exportBtn = document.getElementById('export-excel-btn');
+    const originalText = exportBtn.innerHTML;
+
+    try {
+        // Show loading state
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Excel...';
+        exportBtn.disabled = true;
+
+        // Determine which orders to export
+        const ordersToExport = currentStartDate && currentEndDate ? filteredOrders : orders;
+
+        if (ordersToExport.length === 0) {
+            alert('No orders found to export.');
+            return;
+        }
+
+        // Use the orders data we already have instead of fetching sales data separately
+        // The orders already contain sales information in their structure
+        const detailedOrders = ordersToExport.map(order => ({
+            ...order,
+            salesData: [] // We'll use the order items and their sales data directly
+        }));
+
+        // Create workbook
+        const workbook = XLSX.utils.book_new();
+
+        // Group orders by week
+        const ordersByWeek = groupOrdersByWeek(detailedOrders);
+
+        // Create a sheet for each week
+        Object.keys(ordersByWeek).forEach(weekKey => {
+            const weekOrders = ordersByWeek[weekKey];
+            const sheetData = createSheetData(weekOrders);
+            const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+
+            // Auto-size columns
+            const colWidths = calculateColumnWidths(sheetData);
+            worksheet['!cols'] = colWidths;
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, weekKey);
+        });
+
+        // Generate filename
+        const filename = generateExcelFilename();
+
+        // Download the file
+        XLSX.writeFile(workbook, filename);
+
+        // Show success message
+        setTimeout(() => {
+            alert(`Excel file "${filename}" has been downloaded successfully!`);
+        }, 500);
+
+    } catch (error) {
+        console.error('Excel export failed:', error);
+        alert(`Failed to generate Excel file: ${error.message}. Please try again.`);
+    } finally {
+        // Restore button state
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+    }
+}
+
+function groupOrdersByWeek(orders) {
+    const groups = {};
+
+    orders.forEach(order => {
+        const orderDate = new Date(order.date);
+        const startOfWeek = getStartOfWeek(orderDate);
+        const endOfWeek = getEndOfWeek(startOfWeek);
+
+        // Create shorter sheet name (Excel limit is 31 chars)
+        const startStr = formatDateShort(startOfWeek);
+        const endStr = formatDateShort(endOfWeek);
+        const weekKey = `Week ${startStr}-${endStr}`;
+
+        if (!groups[weekKey]) {
+            groups[weekKey] = [];
+        }
+        groups[weekKey].push(order);
+    });
+
+    return groups;
+}
+
+function createSheetData(weekOrders) {
+    const data = [];
+
+    // SALES DATA SECTION
+    data.push(['=== SALES DATA ===']);
+    data.push([]);
+
+    const salesHeaders = [
+        'Date',
+        'Product Name',
+        'Planned Quantity',
+        'Actual Quantity Sold',
+        'Unit Price (₦)',
+        'Planned Revenue (₦)',
+        'Actual Revenue (₦)',
+        'Unit Cost (₦)',
+        'Planned Profit (₦)',
+        'Actual Profit (₦)',
+        'Stock Remaining'
+    ];
+
+    data.push(salesHeaders);
+
+    // Add data rows
+    weekOrders.forEach(order => {
+        const orderDate = formatDate(order.date);
+
+        if (order.items && order.items.length > 0) {
+            order.items.forEach(item => {
+                // Use the sales data that's already in the item structure
+                const salesData = item.sales || {};
+
+                const plannedQty = item.quantity || 0;
+                const actualQty = salesData.quantity_sold || 0;
+                const unitPrice = item.sell_price || 0;
+                const actualUnitPrice = salesData.actual_sell_price || unitPrice;
+                const unitCost = item.cost_price || 0;
+
+                const plannedRevenue = plannedQty * unitPrice;
+                const actualRevenue = actualQty * actualUnitPrice;
+                const plannedProfit = plannedQty * (unitPrice - unitCost);
+                const actualProfit = actualQty * (actualUnitPrice - unitCost);
+                const stockRemaining = salesData.quantity_remaining || (plannedQty - actualQty);
+
+                data.push([
+                    orderDate,
+                    item.product_name || 'Unknown Product',
+                    plannedQty,
+                    actualQty,
+                    unitPrice,
+                    plannedRevenue,
+                    actualRevenue,
+                    unitCost,
+                    plannedProfit,
+                    actualProfit,
+                    stockRemaining
+                ]);
+            });
+        } else {
+            // Order with no items
+            data.push([
+                orderDate,
+                'No items in this order',
+                0, 0, 0, 0, 0, 0, 0, 0, 'N/A'
+            ]);
+        }
+    });
+
+    // Add sales summary row
+    if (data.length > 3) { // More than just headers
+        const summaryRow = calculateSummaryRow(data);
+        data.push([]); // Empty row
+        data.push(summaryRow);
+    }
+
+    // Add debtors, giveaways, and logistics sections
+    addDebtorsSection(data, weekOrders);
+    addGiveawaysSection(data, weekOrders);
+    addLogisticsSection(data, weekOrders);
+
+    return data;
+}
+
+function calculateSummaryRow(data) {
+    const dataRows = data.slice(1); // Skip header
+
+    let totalPlannedQty = 0;
+    let totalActualQty = 0;
+    let totalPlannedRevenue = 0;
+    let totalActualRevenue = 0;
+    let totalPlannedProfit = 0;
+    let totalActualProfit = 0;
+
+    dataRows.forEach(row => {
+        if (row.length >= 10 && typeof row[2] === 'number') {
+            totalPlannedQty += row[2] || 0;
+            totalActualQty += row[3] || 0;
+            totalPlannedRevenue += row[5] || 0;
+            totalActualRevenue += row[6] || 0;
+            totalPlannedProfit += row[8] || 0;
+            totalActualProfit += row[9] || 0;
+        }
+    });
+
+    return [
+        'TOTALS',
+        '',
+        totalPlannedQty,
+        totalActualQty,
+        '',
+        totalPlannedRevenue,
+        totalActualRevenue,
+        '',
+        totalPlannedProfit,
+        totalActualProfit,
+        ''
+    ];
+}
+
+function addDebtorsSection(data, weekOrders) {
+    // Collect all debts from the week's orders
+    const allDebts = [];
+    weekOrders.forEach(order => {
+        if (order.debts && order.debts.length > 0) {
+            order.debts.forEach(debt => {
+                allDebts.push({
+                    ...debt,
+                    order_date: order.date
+                });
+            });
+        }
+    });
+
+    if (allDebts.length === 0) return;
+
+    // Add debtors section
+    data.push([]);
+    data.push([]);
+    data.push(['=== DEBTORS ===']);
+    data.push([]);
+
+    const debtHeaders = [
+        'Order Date',
+        'Customer Name',
+        'Debt Amount (₦)',
+        'Amount Paid (₦)',
+        'Outstanding (₦)',
+        'Status',
+        'Date Created',
+        'Description'
+    ];
+
+    data.push(debtHeaders);
+
+    // Add debt rows
+    allDebts.forEach(debt => {
+        data.push([
+            debt.order_date,
+            debt.customer_name,
+            debt.amount,
+            debt.amount_paid || 0,
+            debt.outstanding_amount,
+            debt.status.toUpperCase(),
+            debt.date_created,
+            debt.description || 'No description'
+        ]);
+    });
+
+    // Add debt summary
+    const totalDebtAmount = allDebts.reduce((sum, debt) => sum + (debt.amount || 0), 0);
+    const totalPaid = allDebts.reduce((sum, debt) => sum + (debt.amount_paid || 0), 0);
+    const totalOutstanding = allDebts.reduce((sum, debt) => sum + (debt.outstanding_amount || 0), 0);
+
+    data.push([]);
+    data.push([
+        'DEBT TOTALS',
+        `${allDebts.length} customers`,
+        totalDebtAmount,
+        totalPaid,
+        totalOutstanding,
+        '',
+        '',
+        ''
+    ]);
+}
+
+function addGiveawaysSection(data, weekOrders) {
+    // Collect all giveaways from the week's orders
+    const allGiveaways = [];
+    weekOrders.forEach(order => {
+        if (order.giveaways && order.giveaways.length > 0) {
+            order.giveaways.forEach(giveaway => {
+                allGiveaways.push({
+                    ...giveaway,
+                    order_date: order.date
+                });
+            });
+        }
+    });
+
+    if (allGiveaways.length === 0) return;
+
+    // Add giveaways section
+    data.push([]);
+    data.push([]);
+    data.push(['=== GIVEAWAYS ===']);
+    data.push([]);
+
+    const giveawayHeaders = [
+        'Order Date',
+        'Product Name',
+        'Quantity',
+        'Unit Cost (₦)',
+        'Total Cost (₦)',
+        'Recipient',
+        'Date Given',
+        'Notes'
+    ];
+
+    data.push(giveawayHeaders);
+
+    // Add giveaway rows
+    allGiveaways.forEach(giveaway => {
+        data.push([
+            giveaway.order_date,
+            giveaway.product_name,
+            giveaway.quantity,
+            giveaway.cost_price,
+            giveaway.total_cost,
+            giveaway.recipient,
+            giveaway.date_given,
+            giveaway.notes || 'No notes'
+        ]);
+    });
+
+    // Add giveaway summary
+    const totalQuantity = allGiveaways.reduce((sum, giveaway) => sum + (giveaway.quantity || 0), 0);
+    const totalCost = allGiveaways.reduce((sum, giveaway) => sum + (giveaway.total_cost || 0), 0);
+
+    data.push([]);
+    data.push([
+        'GIVEAWAY TOTALS',
+        `${allGiveaways.length} items`,
+        totalQuantity,
+        '',
+        totalCost,
+        '',
+        '',
+        ''
+    ]);
+}
+
+function addLogisticsSection(data, weekOrders) {
+    // Collect all expenses (logistics) from the week's orders
+    const allExpenses = [];
+    weekOrders.forEach(order => {
+        if (order.expenses && order.expenses.length > 0) {
+            order.expenses.forEach(expense => {
+                allExpenses.push({
+                    ...expense,
+                    order_date: order.date
+                });
+            });
+        }
+    });
+
+    if (allExpenses.length === 0) return;
+
+    // Add logistics/expenses section
+    data.push([]);
+    data.push([]);
+    data.push(['=== LOGISTICS & EXPENSES ===']);
+    data.push([]);
+
+    const expenseHeaders = [
+        'Order Date',
+        'Category',
+        'Description',
+        'Amount (₦)',
+        'Expense Date',
+        'Notes'
+    ];
+
+    data.push(expenseHeaders);
+
+    // Add expense rows
+    allExpenses.forEach(expense => {
+        data.push([
+            expense.order_date,
+            expense.category_display || expense.category,
+            expense.description,
+            expense.amount,
+            expense.date,
+            expense.notes || 'No notes'
+        ]);
+    });
+
+    // Add expense summary by category
+    const expensesByCategory = {};
+    allExpenses.forEach(expense => {
+        const category = expense.category_display || expense.category;
+        if (!expensesByCategory[category]) {
+            expensesByCategory[category] = 0;
+        }
+        expensesByCategory[category] += expense.amount || 0;
+    });
+
+    const totalExpenses = allExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+
+    data.push([]);
+    data.push([
+        'EXPENSE TOTALS',
+        `${Object.keys(expensesByCategory).length} categories`,
+        `${allExpenses.length} expenses`,
+        totalExpenses,
+        '',
+        ''
+    ]);
+
+    // Add category breakdown
+    Object.entries(expensesByCategory).forEach(([category, amount]) => {
+        data.push([
+            '',
+            category,
+            '',
+            amount,
+            '',
+            ''
+        ]);
+    });
+}
+
+function calculateColumnWidths(data) {
+    const widths = [];
+
+    if (data.length === 0) return widths;
+
+    // Calculate width for each column based on content
+    for (let col = 0; col < data[0].length; col++) {
+        let maxWidth = 10; // Minimum width
+
+        data.forEach(row => {
+            if (row[col] !== undefined) {
+                const cellLength = String(row[col]).length;
+                maxWidth = Math.max(maxWidth, cellLength);
+            }
+        });
+
+        widths.push({ wch: Math.min(maxWidth + 2, 30) }); // Max width of 30
+    }
+
+    return widths;
+}
+
+function generateExcelFilename() {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+
+    if (currentStartDate && currentEndDate) {
+        const startStr = formatDateForInput(currentStartDate);
+        const endStr = formatDateForInput(currentEndDate);
+        return `Sunday_Orders_${startStr}_to_${endStr}.xlsx`;
+    } else {
+        return `Sunday_Orders_All_Data_${dateStr}.xlsx`;
+    }
 }
 
 // Products functions
@@ -461,6 +1061,14 @@ function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
         year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function formatDateShort(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric'
     });
@@ -1786,25 +2394,30 @@ function filterDebts() {
 
 function filterOrders() {
     const filter = document.getElementById('orders-filter').value;
-    let filteredOrders = [...orders];
 
+    // First apply date filter
+    applyDateFilter();
+    let ordersToFilter = [...filteredOrders];
+
+    // Then apply status filter
     switch(filter) {
         case 'with-sales':
-            filteredOrders = orders.filter(order => order.has_sales_data);
+            ordersToFilter = ordersToFilter.filter(order => order.has_sales_data);
             break;
         case 'without-sales':
-            filteredOrders = orders.filter(order => !order.has_sales_data);
+            ordersToFilter = ordersToFilter.filter(order => !order.has_sales_data);
             break;
         case 'complete':
-            filteredOrders = orders.filter(order => order.sales_completion_percentage === 100);
+            ordersToFilter = ordersToFilter.filter(order => order.sales_completion_percentage === 100);
             break;
         case 'all':
         default:
-            filteredOrders = orders;
+            // ordersToFilter already contains date-filtered orders
             break;
     }
 
-    updateOrdersCalendar(filteredOrders);
+    updateOrdersCalendar(ordersToFilter);
+    updateOrdersSummary(ordersToFilter);
 }
 
 function exportReports() {
