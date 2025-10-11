@@ -1,14 +1,20 @@
 {
   "name": "sunday-orders-frontend",
   "version": "1.0.0",
-  "description": "Sunday Orders Dashboard Frontend",
+  "description": "Sunday Orders Dashboard Frontend - Deployed on Netlify",
   "main": "index.html",
   "scripts": {
     "dev": "python -m http.server 3000",
     "build": "echo 'No build step required for static HTML'",
-    "start": "python -m http.server 3000"
+    "start": "python -m http.server 3000",
+    "deploy": "netlify deploy --prod --dir=."
   },
-  "keywords": ["dashboard", "orders", "bakery", "management"],
+  "keywords": ["dashboard", "orders", "bakery", "management", "netlify"],
   "author": "Sunday Orders Team",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:dtekluva/PowerPointTribe.git"
+  },
+  "homepage": "https://sunday-orders-dashboard.netlify.app"
 }

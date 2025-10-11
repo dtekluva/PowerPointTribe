@@ -1,0 +1,25 @@
+# Netlify
+.netlify/
+
+# Local development
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables (if any)
+.env
+.env.local
+.env.production
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
