@@ -1123,10 +1123,11 @@ async function showOrderForm() {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Order Date</label>
+                    <label class="form-label" for="order_date">Order Date</label>
                     <input
                         type="date"
                         class="form-input"
+                        id="order_date"
                         name="order_date"
                         value="${getNextSunday()}"
                         required
@@ -1134,9 +1135,10 @@ async function showOrderForm() {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Notes (optional)</label>
+                    <label class="form-label" for="order_notes">Notes (optional)</label>
                     <textarea
                         class="form-input"
+                        id="order_notes"
                         name="notes"
                         rows="2"
                         placeholder="Any notes about this order..."
@@ -1155,20 +1157,22 @@ async function showOrderForm() {
 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label class="form-label">Quantity</label>
+                                        <label class="form-label" for="quantity_${product.id}">Quantity</label>
                                         <input
                                             type="number"
                                             class="form-input"
+                                            id="quantity_${product.id}"
                                             name="quantity_${product.id}"
                                             min="0"
                                             placeholder="0"
                                         >
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Cost Price</label>
+                                        <label class="form-label" for="cost_price_${product.id}">Cost Price</label>
                                         <input
                                             type="number"
                                             class="form-input"
+                                            id="cost_price_${product.id}"
                                             name="cost_price_${product.id}"
                                             min="0"
                                             step="0.01"
@@ -1177,10 +1181,11 @@ async function showOrderForm() {
                                         >
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Sell Price</label>
+                                        <label class="form-label" for="sell_price_${product.id}">Sell Price</label>
                                         <input
                                             type="number"
                                             class="form-input"
+                                            id="sell_price_${product.id}"
                                             name="sell_price_${product.id}"
                                             min="0"
                                             step="0.01"
