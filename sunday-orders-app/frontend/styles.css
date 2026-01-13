@@ -64,6 +64,239 @@ body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
+/* Hamburger Menu Button */
+.hamburger-btn {
+    display: none;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: white;
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.hamburger-btn:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-1px);
+}
+
+/* Mobile Menu Overlay */
+.mobile-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: flex-end;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+}
+
+.mobile-menu {
+    background: white;
+    width: 320px;
+    height: 100%;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+.mobile-menu-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mobile-menu-header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.mobile-menu-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.mobile-menu-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.mobile-menu-content {
+    flex: 1;
+    padding: 1rem 0;
+    overflow-y: auto;
+}
+
+.mobile-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    border: none;
+    background: none;
+    color: #374151;
+    font-size: 1rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.mobile-nav-btn:hover {
+    background: #f3f4f6;
+    border-left-color: #667eea;
+    color: #667eea;
+}
+
+.mobile-nav-btn.active {
+    background: #eff6ff;
+    border-left-color: #667eea;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.mobile-nav-btn i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Modern Select Dropdown */
+.modern-select-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.modern-select-btn {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+    transition: all 0.3s ease;
+    min-width: 180px;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.modern-select-btn:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    transform: translateY(-1px);
+}
+
+.modern-select-btn.active {
+    border-color: #667eea;
+    background: #f8faff;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.select-text {
+    flex: 1;
+    text-align: left;
+}
+
+.select-arrow {
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+    color: #6b7280;
+}
+
+.modern-select-btn.active .select-arrow {
+    transform: rotate(180deg);
+    color: #667eea;
+}
+
+.modern-select-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.modern-select-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.select-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.select-option:last-child {
+    border-bottom: none;
+}
+
+.select-option:hover {
+    background: #f8faff;
+    color: #667eea;
+}
+
+.select-option.active {
+    background: #eff6ff;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.select-option i {
+    width: 16px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.select-option.active i {
+    color: #667eea;
+}
+
 /* Main Content */
 .main-content {
     flex: 1;
@@ -159,7 +392,7 @@ body {
 /* Stats Grid */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -173,6 +406,8 @@ body {
     align-items: center;
     gap: 1rem;
     transition: transform 0.3s ease;
+    min-width: 0; /* Allow shrinking */
+    overflow: hidden; /* Prevent overflow */
 }
 
 .stat-card:hover {
@@ -195,16 +430,28 @@ body {
 .stat-card:nth-child(3) .stat-icon { background: linear-gradient(135deg, #f6ad55, #ed8936); }
 .stat-card:nth-child(4) .stat-icon { background: linear-gradient(135deg, #9f7aea, #805ad5); }
 
+.stat-content {
+    flex: 1;
+    min-width: 0; /* Allow shrinking */
+    overflow: hidden;
+}
+
 .stat-content h3 {
     font-size: 1.8rem;
     font-weight: 700;
     color: #2d3748;
     margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .stat-content p {
     color: #718096;
     font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Cards */
@@ -2108,16 +2355,165 @@ body {
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
-    .navbar {
-        flex-direction: column;
-        gap: 1rem;
+@media (max-width: 1599px) {
+    /* Show hamburger menu and hide nav-links on screens below 1600px */
+    .hamburger-btn {
+        display: block;
     }
 
     .nav-links {
-        flex-wrap: wrap;
-        justify-content: center;
+        display: none;
     }
+
+    .navbar {
+        justify-content: space-between;
+    }
+}
+
+/* iPhone 12 Pro and similar screen sizes */
+@media (max-width: 430px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .stat-card {
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .stat-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+
+    .stat-content h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .stat-content p {
+        font-size: 0.65rem;
+        margin: 0;
+    }
+
+    .main-content {
+        padding: 0.5rem;
+    }
+
+    .page-header {
+        padding: 0.75rem 0;
+    }
+
+    .page-header h2 {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 1rem;
+    }
+
+    .nav-brand h1 {
+        font-size: 1.3rem;
+    }
+
+    .mobile-menu {
+        width: 100%;
+    }
+
+    .mobile-menu-header {
+        padding: 1rem;
+    }
+
+    .mobile-menu-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .modern-select-btn {
+        min-width: 120px;
+        padding: 0.5rem 0.7rem;
+        font-size: 0.75rem;
+    }
+
+    .modern-select-dropdown {
+        font-size: 0.75rem;
+    }
+
+    .select-option {
+        padding: 0.6rem 0.7rem;
+    }
+
+    /* Further reduce stats grid for very small screens */
+    .stats-grid {
+        gap: 0.4rem;
+    }
+
+    .stat-card {
+        padding: 0.6rem;
+        gap: 0.4rem;
+    }
+
+    .stat-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+
+    .stat-content h3 {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .stat-content p {
+        font-size: 0.6rem;
+        margin: 0;
+    }
+}
+
+/* Very small screens (iPhone SE, etc.) */
+@media (max-width: 375px) {
+    .main-content {
+        padding: 0.4rem;
+    }
+
+    .stats-grid {
+        gap: 0.3rem;
+    }
+
+    .stat-card {
+        padding: 0.5rem;
+        gap: 0.3rem;
+    }
+
+    .stat-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+
+    .stat-content h3 {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .stat-content p {
+        font-size: 0.55rem;
+        margin: 0;
+    }
+
+    .page-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .modern-select-btn {
+        min-width: 90px;
+        padding: 0.3rem 0.5rem;
+        font-size: 0.65rem;
+    }
+}
 
     .main-content {
         padding: 1rem;

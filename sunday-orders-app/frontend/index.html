@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunday Orders Dashboard</title>
-    <link rel="stylesheet" href="styles.css?v=2.5">
+    <link rel="stylesheet" href="styles.css?v=2.9">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- SheetJS for Excel export functionality -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -73,7 +73,7 @@
                         </div>
                         <div class="stat-content">
                             <h3 id="current-week-revenue">₦0</h3>
-                            <p>This Week Revenue</p>
+                            <p>Revenue</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -82,7 +82,7 @@
                         </div>
                         <div class="stat-content">
                             <h3 id="current-week-profit">₦0</h3>
-                            <p>This Week Profit</p>
+                            <p>Week Profit</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -91,7 +91,7 @@
                         </div>
                         <div class="stat-content">
                             <h3 id="total-debt">₦0</h3>
-                            <p>Outstanding Debts</p>
+                            <p>Debts</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -100,7 +100,7 @@
                         </div>
                         <div class="stat-content">
                             <h3 id="total-customers">0</h3>
-                            <p>Total Customers</p>
+                            <p>Customers</p>
                         </div>
                     </div>
                 </div>
@@ -135,20 +135,45 @@
                 <div class="page-header">
                     <h2>Weekly Orders</h2>
                     <div class="header-actions">
-                        <select id="orders-filter" onchange="filterOrders()">
+                        <!-- Hidden select for compatibility -->
+                        <select id="orders-filter" style="display: none;">
                             <option value="all">All Orders</option>
                             <option value="with-sales">With Sales Data</option>
                             <option value="without-sales">Without Sales Data</option>
                             <option value="complete">100% Complete</option>
                         </select>
+
+                        <!-- Modern Filter Dropdown -->
+                        <div class="modern-select-wrapper">
+                            <button class="modern-select-btn" onclick="toggleFilterDropdown()" id="filter-btn">
+                                <span class="select-text">All Orders</span>
+                                <i class="fas fa-chevron-down select-arrow"></i>
+                            </button>
+                            <div class="modern-select-dropdown" id="filter-dropdown">
+                                <div class="select-option active" data-value="all" onclick="selectFilter('all', 'All Orders')">
+                                    <i class="fas fa-list"></i>
+                                    <span>All Orders</span>
+                                </div>
+                                <div class="select-option" data-value="with-sales" onclick="selectFilter('with-sales', 'With Sales Data')">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>With Sales Data</span>
+                                </div>
+                                <div class="select-option" data-value="without-sales" onclick="selectFilter('without-sales', 'Without Sales Data')">
+                                    <i class="fas fa-chart-line-down"></i>
+                                    <span>Without Sales Data</span>
+                                </div>
+                                <div class="select-option" data-value="complete" onclick="selectFilter('complete', '100% Complete')">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>100% Complete</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <button class="btn btn-secondary" onclick="showOrderForm()">
-                            <i class="fas fa-plus"></i> New Order
-                        </button>
-                        <button class="btn btn-outline" onclick="copyFromPrevious()">
-                            <i class="fas fa-copy"></i> Copy Previous
+                            <i class="fas fa-plus"></i> New
                         </button>
                         <button class="btn btn-success" onclick="exportToExcel()" id="export-excel-btn">
-                            <i class="fas fa-file-excel"></i> Export to Excel
+                            <i class="fas fa-file-excel"></i> Export
                         </button>
                     </div>
                 </div>
@@ -404,11 +429,52 @@
         </div>
     </div>
 
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu-overlay" class="mobile-menu-overlay">
+        <div class="mobile-menu">
+            <div class="mobile-menu-header">
+                <h2><i class="fas fa-calendar-week"></i> Sunday Orders</h2>
+                <button class="mobile-menu-close" onclick="toggleMobileMenu()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-menu-content">
+                <button class="mobile-nav-btn active" data-page="dashboard" onclick="closeMobileMenuAndNavigate('dashboard')">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </button>
+                <button class="mobile-nav-btn" data-page="orders" onclick="closeMobileMenuAndNavigate('orders')">
+                    <i class="fas fa-calendar-alt"></i> Weekly Orders
+                </button>
+                <a href="customer-orders.html" class="mobile-nav-btn" onclick="closeMobileMenu()">
+                    <i class="fas fa-shopping-cart"></i> Customer Orders
+                </a>
+                <a href="stock-management.html" class="mobile-nav-btn" onclick="closeMobileMenu()">
+                    <i class="fas fa-boxes"></i> Stock Management
+                </a>
+                <button class="mobile-nav-btn" data-page="products" onclick="closeMobileMenuAndNavigate('products')">
+                    <i class="fas fa-box"></i> Products
+                </button>
+                <button class="mobile-nav-btn" data-page="customers" onclick="closeMobileMenuAndNavigate('customers')">
+                    <i class="fas fa-users"></i> Customers
+                </button>
+                <button class="mobile-nav-btn" data-page="debts" onclick="closeMobileMenuAndNavigate('debts')">
+                    <i class="fas fa-money-bill-wave"></i> Debts
+                </button>
+                <button class="mobile-nav-btn" data-page="tracking" onclick="closeMobileMenuAndNavigate('tracking')">
+                    <i class="fas fa-clipboard-list"></i> Tracking
+                </button>
+                <button class="mobile-nav-btn" data-page="reports" onclick="closeMobileMenuAndNavigate('reports')">
+                    <i class="fas fa-chart-bar"></i> Reports
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Spinner -->
     <div id="loading-spinner" class="loading-spinner">
         <div class="spinner"></div>
     </div>
 
-    <script src="script.js?v=2.11"></script>
+    <script src="script.js?v=2.13"></script>
 </body>
 </html>

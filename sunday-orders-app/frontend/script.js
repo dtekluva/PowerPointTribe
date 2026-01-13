@@ -26,6 +26,7 @@ function initializeApp() {
     setupNavigation();
     loadInitialData();
     showPage('dashboard');
+    updateActiveNavigation('dashboard'); // Initialize both menus with dashboard active
 }
 
 // Navigation
@@ -35,12 +36,29 @@ function setupNavigation() {
         btn.addEventListener('click', () => {
             const page = btn.dataset.page;
             showPage(page);
-
-            // Update active nav button
-            navButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            updateActiveNavigation(page);
         });
     });
+}
+
+function updateActiveNavigation(page) {
+    // Update desktop nav buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeDesktopBtn = document.querySelector(`.nav-btn[data-page="${page}"]`);
+    if (activeDesktopBtn) {
+        activeDesktopBtn.classList.add('active');
+    }
+
+    // Update mobile nav buttons
+    document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeMobileBtn = document.querySelector(`.mobile-nav-btn[data-page="${page}"]`);
+    if (activeMobileBtn) {
+        activeMobileBtn.classList.add('active');
+    }
 }
 
 function showPage(pageName) {
@@ -1118,6 +1136,121 @@ function showModal(title, content) {
 
 function closeModal() {
     document.getElementById('modal-overlay').style.display = 'none';
+}
+
+// Mobile Menu Functions
+function toggleMobileMenu() {
+    const overlay = document.getElementById('mobile-menu-overlay');
+    const isVisible = overlay.style.display === 'flex';
+
+    if (isVisible) {
+        closeMobileMenu();
+    } else {
+        openMobileMenu();
+    }
+}
+
+function openMobileMenu() {
+    document.getElementById('mobile-menu-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+function closeMobileMenu() {
+    document.getElementById('mobile-menu-overlay').style.display = 'none';
+    document.body.style.overflow = ''; // Restore scrolling
+}
+
+function closeMobileMenuAndNavigate(page) {
+    closeMobileMenu();
+    showPage(page);
+    updateActiveNavigation(page);
+}
+
+// Close mobile menu when clicking on overlay or pressing Escape
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('mobile-menu-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                closeMobileMenu();
+            }
+        });
+    }
+
+    // Close mobile menu on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const overlay = document.getElementById('mobile-menu-overlay');
+            if (overlay && overlay.style.display === 'flex') {
+                closeMobileMenu();
+            }
+
+            // Also close filter dropdown on Escape
+            const dropdown = document.getElementById('filter-dropdown');
+            if (dropdown && dropdown.classList.contains('show')) {
+                closeFilterDropdown();
+            }
+        }
+    });
+
+    // Close filter dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const wrapper = document.querySelector('.modern-select-wrapper');
+        const dropdown = document.getElementById('filter-dropdown');
+
+        if (wrapper && dropdown && !wrapper.contains(e.target)) {
+            closeFilterDropdown();
+        }
+    });
+});
+
+// Modern Filter Dropdown Functions
+function toggleFilterDropdown() {
+    const dropdown = document.getElementById('filter-dropdown');
+    const btn = document.getElementById('filter-btn');
+
+    if (dropdown.classList.contains('show')) {
+        closeFilterDropdown();
+    } else {
+        openFilterDropdown();
+    }
+}
+
+function openFilterDropdown() {
+    const dropdown = document.getElementById('filter-dropdown');
+    const btn = document.getElementById('filter-btn');
+
+    dropdown.classList.add('show');
+    btn.classList.add('active');
+}
+
+function closeFilterDropdown() {
+    const dropdown = document.getElementById('filter-dropdown');
+    const btn = document.getElementById('filter-btn');
+
+    dropdown.classList.remove('show');
+    btn.classList.remove('active');
+}
+
+function selectFilter(value, text) {
+    // Update button text
+    document.querySelector('.select-text').textContent = text;
+
+    // Update active option
+    document.querySelectorAll('.select-option').forEach(option => {
+        option.classList.remove('active');
+    });
+    document.querySelector(`[data-value="${value}"]`).classList.add('active');
+
+    // Close dropdown
+    closeFilterDropdown();
+
+    // Apply filter (call existing function)
+    const oldSelect = document.getElementById('orders-filter');
+    if (oldSelect) {
+        oldSelect.value = value;
+    }
+    filterOrders();
 }
 
 // Placeholder functions for features to be implemented
