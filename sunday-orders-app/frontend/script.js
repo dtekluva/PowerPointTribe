@@ -93,7 +93,20 @@ async function apiRequest(endpoint, options = {}) {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return await response.json();
+
+        // Handle empty responses (like DELETE operations that return 204 No Content)
+        const contentType = response.headers.get('content-type');
+        if (response.status === 204 || !contentType || !contentType.includes('application/json')) {
+            return null;
+        }
+
+        // Check if response has content before trying to parse JSON
+        const text = await response.text();
+        if (!text) {
+            return null;
+        }
+
+        return JSON.parse(text);
     } catch (error) {
         console.error('API request failed:', error);
         showError('Failed to connect to server. Please check if the backend is running.');
@@ -950,6 +963,9 @@ function updateProductsList(products) {
                 <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); viewProductHistory(${product.id})" title="View Usage History">
                     <i class="fas fa-history"></i>
                 </button>
+                <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteProduct(${product.id})" title="Delete Product">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
         </div>
     `).join('');
@@ -1620,6 +1636,71 @@ async function submitEditProduct(event, productId) {
         console.error('Failed to update product:', error);
         showError('Failed to update product. Please check your entries and try again.');
     }
+}
+
+async function deleteProduct(productId) {
+    try {
+        // Get product details for confirmation
+        const product = await apiRequest(`/products/${productId}/`);
+
+        if (!product) {
+            showError('Product not found.');
+            return;
+        }
+
+        // Show confirmation dialog
+        const confirmed = confirm(
+            `Are you sure you want to delete this product?\n\n` +
+            `Product: ${product.name}\n` +
+            `Cost Price: ${formatCurrency(product.default_cost_price || 0)}\n` +
+            `Sell Price: ${formatCurrency(product.default_sell_price || 0)}\n` +
+            `${product.description ? `Description: ${product.description}\n` : ''}` +
+            `\nThis action cannot be undone.`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        showLoading(true);
+
+        // Delete the product
+        await apiRequest(`/products/${productId}/`, {
+            method: 'DELETE'
+        });
+
+        showLoading(false);
+
+        // Show success message
+        showSuccess('Product deleted successfully!');
+
+        // Refresh the products list
+        if (currentPage === 'products') {
+            await loadProductsData();
+        }
+
+        // Refresh dashboard if on dashboard
+        if (currentPage === 'dashboard') {
+            await loadDashboardData();
+        }
+
+    } catch (error) {
+        showLoading(false);
+        console.error('Failed to delete product:', error);
+
+        // Handle specific error cases
+        if (error.message.includes('404')) {
+            showError('Product not found. It may have already been deleted.');
+        } else if (error.message.includes('400') || error.message.includes('409')) {
+            showError('Cannot delete product. It may be in use by existing orders.');
+        } else {
+            showError('Failed to delete product. Please try again.');
+        }
+    }
+}
+
+function viewProductHistory(productId) {
+    showModal('Product History', '<p>Product history functionality will be implemented here</p>');
 }
 
 function showCustomerForm(customerId = null) {
