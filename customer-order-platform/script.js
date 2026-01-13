@@ -102,9 +102,10 @@ async function apiRequest(endpoint, options = {}) {
 
 async function loadProducts() {
     try {
-        const data = await apiRequest('/products/');
+        console.log('🔄 Loading products with stock information...');
+        const data = await apiRequest('/products/with_stock/');
         products = data.results || data;
-        console.log('Loaded products:', products);
+        console.log('📦 Loaded products with stock:', products.length);
     } catch (error) {
         console.error('Failed to load products:', error);
         throw error;
@@ -127,7 +128,7 @@ function renderProducts() {
     productsGrid.innerHTML = products.map(product => {
         const stock = getProductStock(product);
         const stockClass = getStockClass(stock);
-        const stockText = getStockText(stock);
+        const stockText = getStockText(stock, product);
         const isOutOfStock = stock <= 0;
 
         return `
@@ -164,21 +165,18 @@ function renderProducts() {
 
 // Stock management functions
 function getProductStock(product) {
-    // For now, we'll use a simple stock system
-    // In a real implementation, this would come from the backend
-    const stockMap = {
-        1: 50,  // Sugar Donuts
-        2: 30,  // Sausage Roll
-        3: 25,  // Jam Donuts
-        4: 20,  // Banana Bread
-        5: 15   // Chocolate Cake
-    };
+    // Use real stock data from backend
+    if (product.available_stock !== undefined) {
+        // Reduce stock based on current cart items
+        const cartItem = cart.find(item => item.id === product.id);
+        const cartQuantity = cartItem ? cartItem.quantity : 0;
 
-    // Reduce stock based on cart items
-    const cartItem = cart.find(item => item.id === product.id);
-    const reservedQuantity = cartItem ? cartItem.quantity : 0;
+        return Math.max(0, product.available_stock - cartQuantity);
+    }
 
-    return (stockMap[product.id] || 10) - reservedQuantity;
+    // Fallback for products without stock data
+    console.warn('Product missing stock data:', product.name);
+    return 0;
 }
 
 function getStockClass(stock) {
@@ -187,9 +185,18 @@ function getStockClass(stock) {
     return 'stock-available';
 }
 
-function getStockText(stock) {
+function getStockText(stock, product = null) {
     if (stock <= 0) return 'Out of Stock';
     if (stock <= 5) return `Only ${stock} left`;
+
+    // Show additional stock info if available
+    if (product && product.current_stock !== undefined) {
+        const reserved = product.reserved_stock || 0;
+        if (reserved > 0) {
+            return `${stock} available (${reserved} reserved)`;
+        }
+    }
+
     return `${stock} available`;
 }
 

@@ -18,7 +18,10 @@
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-secondary" onclick="window.location.href='index.html'">
-                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                        <i class="fas fa-arrow-left"></i> Dashboard
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.location.href='stock-management.html'">
+                        <i class="fas fa-boxes"></i> Stock Management
                     </button>
                     <button class="btn btn-primary" onclick="refreshOrders()">
                         <i class="fas fa-refresh"></i> Refresh
@@ -45,7 +48,7 @@
                         <i class="fas fa-times"></i> Reset
                     </button>
                 </div>
-                
+
                 <div class="filters-grid">
                     <div class="filter-group">
                         <label for="status-filter">Status</label>
@@ -58,17 +61,17 @@
                             <option value="cancelled">Cancelled</option>
                         </select>
                     </div>
-                    
+
                     <div class="filter-group">
                         <label for="date-filter">Order Date</label>
                         <input type="date" id="date-filter" onchange="applyFilters()">
                     </div>
-                    
+
                     <div class="filter-group">
                         <label for="customer-filter">Customer Name</label>
                         <input type="text" id="customer-filter" placeholder="Search by name..." onkeyup="applyFilters()">
                     </div>
-                    
+
                     <div class="filter-group">
                         <label for="payment-filter">Payment Method</label>
                         <select id="payment-filter" onchange="applyFilters()">
@@ -78,7 +81,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="quick-filters">
                     <button class="btn btn-outline" onclick="filterToday()">
                         <i class="fas fa-calendar-day"></i> Today's Orders
@@ -104,7 +107,7 @@
                             <p>Total Orders</p>
                         </div>
                     </div>
-                    
+
                     <div class="stat-card">
                         <div class="stat-icon">
                             <i class="fas fa-naira-sign"></i>
@@ -114,7 +117,7 @@
                             <p>Total Revenue</p>
                         </div>
                     </div>
-                    
+
                     <div class="stat-card">
                         <div class="stat-icon">
                             <i class="fas fa-clock"></i>
@@ -124,7 +127,7 @@
                             <p>Pending Orders</p>
                         </div>
                     </div>
-                    
+
                     <div class="stat-card">
                         <div class="stat-icon">
                             <i class="fas fa-check-circle"></i>
@@ -145,7 +148,7 @@
                         <span id="orders-count" class="count-badge">0 orders</span>
                     </div>
                 </div>
-                
+
                 <div class="table-container">
                     <table class="orders-table">
                         <thead>
@@ -165,7 +168,7 @@
                         </tbody>
                     </table>
                 </div>
-                
+
                 <div id="no-orders" class="no-data" style="display: none;">
                     <i class="fas fa-shopping-cart"></i>
                     <h3>No orders found</h3>
@@ -184,13 +187,13 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            
+
             <div class="modal-body">
                 <div id="order-details">
                     <!-- Order details will be populated here -->
                 </div>
             </div>
-            
+
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeOrderModal()">Close</button>
                 <button id="update-status-btn" class="btn btn-primary" onclick="showStatusUpdate()">
@@ -209,7 +212,7 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            
+
             <div class="modal-body">
                 <form id="status-form">
                     <div class="form-group">
@@ -222,14 +225,14 @@
                             <option value="cancelled">Cancelled</option>
                         </select>
                     </div>
-                    
+
                     <div id="collection-fields" class="form-group" style="display: none;">
                         <label for="collected-by">Collected By (Staff Member)</label>
                         <input type="text" id="collected-by" placeholder="Enter staff member name">
                     </div>
                 </form>
             </div>
-            
+
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeStatusModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="updateOrderStatus()">

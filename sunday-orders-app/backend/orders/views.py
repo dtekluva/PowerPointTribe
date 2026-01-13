@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, F, Count, Case, When, IntegerField
 from django.utils import timezone
 from datetime import datetime, timedelta
 from .models import Customer, Product, WeeklyOrder, OrderItem, Debt, SalesEntry, Giveaway, Expense, CustomerOrder, CustomerOrderItem
@@ -28,6 +28,74 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.filter(is_active=True)
     serializer_class = ProductSerializer
+
+    @action(detail=False, methods=['get'])
+    def with_stock(self, request):
+        """Get products with current stock levels from active weekly orders"""
+        # Get the most recent active weekly order (current week's stock)
+        active_order = WeeklyOrder.objects.filter(
+            date__lte=timezone.now().date()
+        ).order_by('-date').first()
+
+        if not active_order:
+            # No active order, return products with 0 stock
+            products = self.get_queryset()
+            products_data = []
+            for product in products:
+                product_data = ProductSerializer(product).data
+                product_data['current_stock'] = 0
+                product_data['reserved_stock'] = 0
+                product_data['available_stock'] = 0
+                products_data.append(product_data)
+            return Response(products_data)
+
+        # Get all products with their stock information
+        products = self.get_queryset()
+        products_data = []
+
+        for product in products:
+            # Get the order item for this product in the active weekly order
+            order_item = OrderItem.objects.filter(
+                order=active_order,
+                product=product
+            ).first()
+
+            if not order_item:
+                # Product not in current weekly order
+                product_data = ProductSerializer(product).data
+                product_data['current_stock'] = 0
+                product_data['reserved_stock'] = 0
+                product_data['available_stock'] = 0
+                products_data.append(product_data)
+                continue
+
+            # Calculate sold quantity from sales entries
+            sales_entry = SalesEntry.objects.filter(order_item=order_item).first()
+            sold_quantity = sales_entry.quantity_sold if sales_entry else 0
+
+            # Calculate reserved quantity from pending customer orders
+            reserved_quantity = CustomerOrderItem.objects.filter(
+                product=product,
+                order__status__in=['pending', 'preparing', 'ready']
+            ).aggregate(
+                total_reserved=Sum('quantity')
+            )['total_reserved'] or 0
+
+            # Calculate available stock
+            current_stock = order_item.quantity - sold_quantity
+            available_stock = max(0, current_stock - reserved_quantity)
+
+            # Add stock information to product data
+            product_data = ProductSerializer(product).data
+            product_data['current_stock'] = current_stock
+            product_data['reserved_stock'] = reserved_quantity
+            product_data['available_stock'] = available_stock
+            product_data['weekly_order_id'] = active_order.id
+            product_data['weekly_order_date'] = active_order.date
+
+            products_data.append(product_data)
+
+        return Response(products_data)
 
 
 class WeeklyOrderViewSet(viewsets.ModelViewSet):
@@ -359,9 +427,72 @@ class CustomerOrderViewSet(viewsets.ModelViewSet):
         return CustomerOrderSerializer
 
     def create(self, request, *args, **kwargs):
-        """Override create to return full order data after creation"""
+        """Override create to validate stock and return full order data after creation"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        # Validate stock availability before creating order
+        items_data = request.data.get('items', [])
+        stock_errors = []
+
+        # Get the most recent active weekly order
+        active_order = WeeklyOrder.objects.filter(
+            date__lte=timezone.now().date()
+        ).order_by('-date').first()
+
+        if not active_order:
+            return Response(
+                {'error': 'No active stock order found. Cannot process customer orders.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        for item_data in items_data:
+            product_id = item_data.get('id')
+            requested_quantity = item_data.get('quantity', 0)
+
+            try:
+                product = Product.objects.get(id=product_id)
+
+                # Get the order item for this product in the active weekly order
+                order_item = OrderItem.objects.filter(
+                    order=active_order,
+                    product=product
+                ).first()
+
+                if not order_item:
+                    stock_errors.append(f"{product.name} is not available in current stock order")
+                    continue
+
+                # Calculate current available stock
+                sales_entry = SalesEntry.objects.filter(order_item=order_item).first()
+                sold_quantity = sales_entry.quantity_sold if sales_entry else 0
+
+                # Calculate reserved quantity from other pending customer orders
+                reserved_quantity = CustomerOrderItem.objects.filter(
+                    product=product,
+                    order__status__in=['pending', 'preparing', 'ready']
+                ).aggregate(
+                    total_reserved=Sum('quantity')
+                )['total_reserved'] or 0
+
+                current_stock = order_item.quantity - sold_quantity
+                available_stock = max(0, current_stock - reserved_quantity)
+
+                if requested_quantity > available_stock:
+                    stock_errors.append(
+                        f"{product.name}: Requested {requested_quantity}, but only {available_stock} available"
+                    )
+
+            except Product.DoesNotExist:
+                stock_errors.append(f"Product with ID {product_id} not found")
+
+        if stock_errors:
+            return Response(
+                {'error': 'Stock validation failed', 'details': stock_errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # If stock validation passes, create the order
         order = serializer.save()
 
         # Return the full order data using the read serializer

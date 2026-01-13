@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Management - Sunday Orders</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Loading stock management...</p>
+    </div>
+
+    <div id="main-content" class="main-content" style="display: none;">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1><i class="fas fa-boxes"></i> Stock Management</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="customer-orders.html" class="nav-link">
+                    <i class="fas fa-shopping-cart"></i> Customer Orders
+                </a>
+                <a href="stock-management.html" class="nav-link active">
+                    <i class="fas fa-boxes"></i> Stock Management
+                </a>
+            </div>
+        </nav>
+
+        <div class="container">
+            <!-- Active Stock Order Section -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-calendar-week"></i> Active Stock Order</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" onclick="refreshStock()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div id="active-order-info" class="active-order-card">
+                    <!-- Active order info will be populated here -->
+                </div>
+            </div>
+
+            <!-- Stock Overview Section -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-bar"></i> Stock Overview</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-outline" onclick="exportStockReport()">
+                            <i class="fas fa-download"></i> Export Report
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="total-products">-</div>
+                            <div class="stat-label">Total Products</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="in-stock-products">-</div>
+                            <div class="stat-label">In Stock</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="low-stock-products">-</div>
+                            <div class="stat-label">Low Stock</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="out-of-stock-products">-</div>
+                            <div class="stat-label">Out of Stock</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Details Table -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-list"></i> Stock Details</h2>
+                    <div class="section-actions">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="stock-search" placeholder="Search products..." onkeyup="filterStock()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="stock-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Ordered Qty</th>
+                                <th>Sold Qty</th>
+                                <th>Reserved Qty</th>
+                                <th>Available Qty</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-table-body">
+                            <!-- Stock data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="no-stock-data" class="no-data" style="display: none;">
+                    <i class="fas fa-box-open"></i>
+                    <h3>No Stock Data Available</h3>
+                    <p>No active weekly order found. Create a weekly order to manage stock.</p>
+                    <button class="btn btn-primary" onclick="window.location.href='index.html'">
+                        <i class="fas fa-plus"></i> Create Weekly Order
+                    </button>
+                </div>
+            </div>
+
+            <!-- Customer Orders Impact -->
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-shopping-cart"></i> Customer Orders Impact</h2>
+                </div>
+
+                <div class="orders-impact-grid">
+                    <div class="impact-card">
+                        <div class="impact-header">
+                            <h4><i class="fas fa-clock"></i> Pending Orders</h4>
+                            <span class="impact-count" id="pending-orders-count">-</span>
+                        </div>
+                        <div class="impact-details" id="pending-orders-details">
+                            <!-- Pending orders details -->
+                        </div>
+                    </div>
+
+                    <div class="impact-card">
+                        <div class="impact-header">
+                            <h4><i class="fas fa-cog"></i> Preparing Orders</h4>
+                            <span class="impact-count" id="preparing-orders-count">-</span>
+                        </div>
+                        <div class="impact-details" id="preparing-orders-details">
+                            <!-- Preparing orders details -->
+                        </div>
+                    </div>
+
+                    <div class="impact-card">
+                        <div class="impact-header">
+                            <h4><i class="fas fa-check"></i> Ready Orders</h4>
+                            <span class="impact-count" id="ready-orders-count">-</span>
+                        </div>
+                        <div class="impact-details" id="ready-orders-details">
+                            <!-- Ready orders details -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div id="message-container"></div>
+
+    <script src="stock-management.js"></script>
+</body>
+</html>
