@@ -4,7 +4,7 @@ const isDevelopment = window.location.hostname === 'localhost' || window.locatio
 const API_BASE_URL = isDevelopment
     ? 'http://127.0.0.1:8000/api'  // Local development
     : 'https://ppt.giftoria.cc/api'; // Production
-
+ 
 // Global state
 let currentPage = 'dashboard';
 let customers = [];
