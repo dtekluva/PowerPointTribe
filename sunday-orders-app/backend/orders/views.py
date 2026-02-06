@@ -1,6 +1,9 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import authenticate
 from django.db.models import Sum, Q, F, Count, Case, When, IntegerField
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -607,3 +610,66 @@ class CustomerOrderViewSet(viewsets.ModelViewSet):
             summary['payment_method_breakdown'][payment_code] = count
 
         return Response(summary)
+
+
+# Authentication Views
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    """
+    Login endpoint that returns a token for authentication
+    """
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    if not username or not password:
+        return Response({
+            'error': 'Username and password are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    user = authenticate(username=username, password=password)
+
+    if user:
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'user_id': user.id,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+        })
+    else:
+        return Response({
+            'error': 'Invalid credentials'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['POST'])
+def logout_view(request):
+    """
+    Logout endpoint that deletes the user's token
+    """
+    try:
+        token = Token.objects.get(user=request.user)
+        token.delete()
+        return Response({'message': 'Successfully logged out'})
+    except Token.DoesNotExist:
+        return Response({'message': 'Already logged out'})
+
+
+@api_view(['GET'])
+def user_profile(request):
+    """
+    Get current user profile information
+    """
+    user = request.user
+    return Response({
+        'user_id': user.id,
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
+    })

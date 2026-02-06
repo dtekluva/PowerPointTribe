@@ -19,14 +19,81 @@ let filteredOrders = [];
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
+    checkAuthentication();
 });
+
+function checkAuthentication() {
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+        // No token, redirect to login
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // Verify token is still valid
+    verifyAuthToken(token);
+}
+
+async function verifyAuthToken(token) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/profile/`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (response.ok) {
+            // Token is valid, initialize app
+            initializeApp();
+        } else {
+            // Token is invalid, redirect to login
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userInfo');
+            window.location.href = 'login.html';
+        }
+    } catch (error) {
+        console.error('Token verification error:', error);
+        // Network error, still try to initialize app but show warning
+        initializeApp();
+    }
+}
 
 function initializeApp() {
     setupNavigation();
     loadInitialData();
     showPage('dashboard');
     updateActiveNavigation('dashboard'); // Initialize both menus with dashboard active
+}
+
+// Logout function
+async function logout() {
+    const token = localStorage.getItem('authToken');
+
+    if (token) {
+        try {
+            // Call logout endpoint to invalidate token on server
+            await fetch(`${API_BASE_URL}/auth/logout/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Token ${token}`,
+                    'Content-Type': 'application/json',
+                }
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+
+    // Clear local storage
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userInfo');
+    localStorage.removeItem('rememberLogin');
+
+    // Redirect to login page
+    window.location.href = 'login.html';
 }
 
 // Navigation
@@ -100,9 +167,12 @@ function showPage(pageName) {
 // API Functions
 async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
+    const token = localStorage.getItem('authToken');
+
     const defaultOptions = {
         headers: {
             'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Token ${token}` }),
         },
     };
 

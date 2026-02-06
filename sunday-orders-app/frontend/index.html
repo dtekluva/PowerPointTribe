@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunday Orders Dashboard</title>
-    <link rel="stylesheet" href="styles.css?v=2.9">
+    <link rel="stylesheet" href="styles.css?v=3.0">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- SheetJS for Excel export functionality -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -49,6 +49,9 @@
                 </button>
                 <button class="nav-btn" data-page="reports">
                     <i class="fas fa-chart-bar"></i> Reports
+                </button>
+                <button class="nav-btn logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
             </div>
         </nav>
@@ -466,6 +469,9 @@
                 <button class="mobile-nav-btn" data-page="reports" onclick="closeMobileMenuAndNavigate('reports')">
                     <i class="fas fa-chart-bar"></i> Reports
                 </button>
+                <button class="mobile-nav-btn logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         </div>
     </div>
@@ -475,6 +481,6 @@
         <div class="spinner"></div>
     </div>
 
-    <script src="script.js?v=2.13"></script>
+    <script src="script.js?v=3.0"></script>
 </body>
 </html>

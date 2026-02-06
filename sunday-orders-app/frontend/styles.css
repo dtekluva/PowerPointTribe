@@ -59,6 +59,19 @@ body {
     transform: translateY(-1px);
 }
 
+.nav-btn.logout-btn {
+    margin-left: auto;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.nav-btn.logout-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
 .nav-btn.active {
     background: rgba(255,255,255,0.3);
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -183,6 +196,19 @@ body {
 .mobile-nav-btn i {
     width: 20px;
     text-align: center;
+}
+
+.mobile-nav-btn.logout-btn {
+    margin-top: auto;
+    background: rgba(239, 68, 68, 0.05);
+    color: #ef4444;
+    border-left-color: #ef4444;
+}
+
+.mobile-nav-btn.logout-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border-left-color: #dc2626;
 }
 
 /* Modern Select Dropdown */
