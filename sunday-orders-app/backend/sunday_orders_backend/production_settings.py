@@ -32,6 +32,7 @@ MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
+    "https://tribesheart.netlify.app",
     "http://ppt.giftoria.cc:3002",
     "http://165.227.67.116:3002",
     "http://localhost:3002",
