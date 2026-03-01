@@ -6,8 +6,9 @@ DEBUG = False
 
 # Update this with your actual domain
 ALLOWED_HOSTS = [
-    'your-backend-domain.herokuapp.com',
-    'your-backend-domain.railway.app',
+    'ppt.giftoria.cc',
+    'www.ppt.giftoria.cc',
+    '165.227.67.116',
     'localhost',
     '127.0.0.1',
 ]
@@ -31,8 +32,10 @@ MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
-    "https://your-frontend-domain.vercel.app",
-    "http://localhost:3000",  # Remove in production
+    "http://ppt.giftoria.cc:3002",
+    "http://165.227.67.116:3002",
+    "http://localhost:3002",
+    "http://127.0.0.1:3002",
 ]
 
 # Remove this in production

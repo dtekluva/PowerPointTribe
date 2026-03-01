@@ -1,7 +1,7 @@
 [build]
   # No build command needed for static HTML/CSS/JS
   publish = "."
-  
+
 [build.environment]
   # Environment variables for build process (if needed)
   NODE_VERSION = "18"
@@ -15,7 +15,7 @@
     X-Content-Type-Options = "nosniff"
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    
+
     # Cache control for static assets
     Cache-Control = "public, max-age=31536000"
 
@@ -43,8 +43,8 @@
   status = 200
   force = false
 
-# SPA fallback - redirect all routes to index.html for client-side routing
+# Fallback - unmatched routes go to login page
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/login.html"
   status = 200

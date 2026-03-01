@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle form submission
     loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        
+
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
         const rememberMe = document.getElementById('rememberMe').checked;
@@ -31,7 +31,10 @@ document.addEventListener('DOMContentLoaded', function() {
         hideError();
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiBase = isDev ? 'http://127.0.0.1:8000/api' : 'https://ppt.giftoria.cc/api';
+
+            const response = await fetch(`${apiBase}/auth/login/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -61,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Show success message briefly
                 showSuccess('Login successful! Redirecting...');
-                
+
                 // Redirect to dashboard after short delay
                 setTimeout(() => {
                     window.location.href = 'index.html';
@@ -82,7 +85,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Verify token validity
     async function verifyToken(token) {
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/auth/profile/', {
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiBase = isDev ? 'http://127.0.0.1:8000/api' : 'https://ppt.giftoria.cc/api';
+            const response = await fetch(`${apiBase}/auth/profile/`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Token ${token}`,
@@ -145,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function togglePassword() {
     const passwordInput = document.getElementById('password');
     const toggleIcon = document.getElementById('toggleIcon');
-    
+
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
         toggleIcon.classList.remove('fa-eye');
