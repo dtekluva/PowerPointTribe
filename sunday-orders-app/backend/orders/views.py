@@ -333,17 +333,21 @@ class DashboardViewSet(viewsets.ViewSet):
         # Determine the reference date for "4 weeks ago" top-items query
         reference_date = current_week_order.date if current_week_order else today
 
-        # Calculate stats
-        current_week_revenue = current_week_order.total_revenue if current_week_order else 0
-        current_week_profit = current_week_order.total_profit if current_week_order else 0
-        last_week_revenue = last_week_order.total_revenue if last_week_order else 0
+        # Year-to-date revenue (sum of all order item revenue this year)
+        year_start = today.replace(month=1, day=1)
+        ytd_orders = WeeklyOrder.objects.filter(date__gte=year_start, date__lte=today)
+        ytd_revenue = sum(o.total_revenue for o in ytd_orders)
 
-        # Outstanding debts
-        total_debt = Debt.objects.filter(
+        # Year-to-date debts (all debts created this year, outstanding or partial)
+        ytd_debt = Debt.objects.filter(
+            date_created__gte=year_start,
             status__in=['outstanding', 'partial']
         ).aggregate(
             total=Sum('amount') - Sum('amount_paid')
         )['total'] or 0
+
+        # Current week profit (kept for the profit card)
+        current_week_profit = current_week_order.total_profit if current_week_order else 0
 
         # Top selling items (last 4 weeks)
         four_weeks_ago = reference_date - timedelta(days=28)
@@ -356,15 +360,12 @@ class DashboardViewSet(viewsets.ViewSet):
 
         return Response({
             'current_week': {
-                'revenue': current_week_revenue,
+                'revenue': ytd_revenue,
                 'profit': current_week_profit,
                 'date': current_week_order.date if current_week_order else today
             },
-            'last_week': {
-                'revenue': last_week_revenue,
-                'date': last_week_order.date if last_week_order else None
-            },
-            'total_outstanding_debt': total_debt,
+            'ytd_debt': ytd_debt,
+            'total_outstanding_debt': ytd_debt,
             'top_items': list(top_items)
         })
 
