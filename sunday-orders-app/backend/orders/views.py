@@ -313,12 +313,25 @@ class DashboardViewSet(viewsets.ViewSet):
     def stats(self, request):
         # Get current week stats
         today = timezone.now().date()
-        days_since_sunday = today.weekday() + 1 if today.weekday() != 6 else 0
-        current_sunday = today - timedelta(days=days_since_sunday)
-        last_sunday = current_sunday - timedelta(days=7)
 
-        current_week_order = WeeklyOrder.objects.filter(date=current_sunday).first()
-        last_week_order = WeeklyOrder.objects.filter(date=last_sunday).first()
+        # Find the nearest weekly order within a ±6 day window (handles orders
+        # entered in advance for the upcoming Sunday as well as past Sundays).
+        current_week_order = WeeklyOrder.objects.filter(
+            date__gte=today - timedelta(days=6),
+            date__lte=today + timedelta(days=6)
+        ).order_by('-date').first()
+
+        # Previous week: the order that comes immediately before current_week_order
+        if current_week_order:
+            current_order_date = current_week_order.date
+            last_week_order = WeeklyOrder.objects.filter(
+                date__lt=current_order_date
+            ).order_by('-date').first()
+        else:
+            last_week_order = WeeklyOrder.objects.order_by('-date').first()
+
+        # Determine the reference date for "4 weeks ago" top-items query
+        reference_date = current_week_order.date if current_week_order else today
 
         # Calculate stats
         current_week_revenue = current_week_order.total_revenue if current_week_order else 0
@@ -333,7 +346,7 @@ class DashboardViewSet(viewsets.ViewSet):
         )['total'] or 0
 
         # Top selling items (last 4 weeks)
-        four_weeks_ago = current_sunday - timedelta(days=28)
+        four_weeks_ago = reference_date - timedelta(days=28)
         top_items = OrderItem.objects.filter(
             order__date__gte=four_weeks_ago
         ).values('product__name').annotate(
@@ -345,11 +358,11 @@ class DashboardViewSet(viewsets.ViewSet):
             'current_week': {
                 'revenue': current_week_revenue,
                 'profit': current_week_profit,
-                'date': current_sunday
+                'date': current_week_order.date if current_week_order else today
             },
             'last_week': {
                 'revenue': last_week_revenue,
-                'date': last_sunday
+                'date': last_week_order.date if last_week_order else None
             },
             'total_outstanding_debt': total_debt,
             'top_items': list(top_items)
