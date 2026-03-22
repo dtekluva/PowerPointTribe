@@ -31,8 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         hideError();
 
         try {
-            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const apiBase = isDev ? 'http://127.0.0.1:8000/api' : 'https://ppt.giftoria.cc/api';
+            const apiBase = '/api';
 
             const response = await fetch(`${apiBase}/auth/login/`, {
                 method: 'POST',
@@ -85,8 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Verify token validity
     async function verifyToken(token) {
         try {
-            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const apiBase = isDev ? 'http://127.0.0.1:8000/api' : 'https://ppt.giftoria.cc/api';
+            const apiBase = '/api';
             const response = await fetch(`${apiBase}/auth/profile/`, {
                 method: 'GET',
                 headers: {

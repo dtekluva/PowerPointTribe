@@ -15,54 +15,55 @@ A simple, functional dashboard for managing Sunday orders, customers, products, 
 ## Technology Stack
 
 - **Frontend**: Pure HTML, CSS, and JavaScript (no frameworks)
-- **Backend**: Django REST API deployed at `https://ppt.giftoria.cc/api/`
-- **Deployment**: Netlify (static hosting)
+- **Backend**: Django REST Framework (Gunicorn)
+- **Deployment**: Docker Compose (Nginx + Django + PostgreSQL)
 
-## Deployment to Netlify
+## Default Credentials
 
-### Option 1: Git Integration (Recommended)
+### Frontend / Django Admin
 
-1. **Connect Repository**:
-   - Go to [Netlify](https://netlify.com) and sign in
-   - Click "New site from Git"
-   - Connect your GitHub repository
-   - Select the repository containing this frontend
+| Field    | Value                        |
+|----------|------------------------------|
+| Username | `admin`                      |
+| Password | `PPT@2024`                   |
+| Login    | `http://localhost/login.html` |
+| Admin    | `http://localhost/admin/`    |
 
-2. **Configure Build Settings**:
-   - **Base directory**: `sunday-orders-app/frontend`
-   - **Build command**: Leave empty (no build needed)
-   - **Publish directory**: `sunday-orders-app/frontend`
+The same username and password are used to log into the frontend CRM and the Django admin panel.
 
-3. **Deploy**:
-   - Click "Deploy site"
-   - Netlify will automatically deploy and provide a URL
+### PostgreSQL Database
 
-### Option 2: Manual Deployment
+| Field    | Value           |
+|----------|-----------------|
+| Host     | `db` (internal) / `localhost` (host machine) |
+| Port     | `5432`          |
+| Database | `sunday_orders` |
+| User     | `postgres`      |
+| Password | `19sedimat54`   |
 
-1. **Prepare Files**:
-   ```bash
-   cd sunday-orders-app/frontend
-   ```
+Credentials are stored in `sunday-orders-app/.env` (excluded from version control). See `.env.sample` for the template.
 
-2. **Deploy to Netlify**:
-   - Go to [Netlify](https://netlify.com)
-   - Drag and drop the `frontend` folder to the deploy area
-   - Or use Netlify CLI:
-     ```bash
-     npm install -g netlify-cli
-     netlify deploy --prod --dir=.
-     ```
+## Docker Deployment
 
-## Configuration
+```bash
+cd sunday-orders-app
 
-The frontend is pre-configured to connect to the production backend:
-- **API Base URL**: `https://ppt.giftoria.cc/api/`
-- **CORS**: Already configured on the backend
-- **HTTPS**: Enforced with proper SSL certificates
+# Copy the sample env file and fill in your values
+cp .env.sample .env
+
+# Build and start all services
+docker compose up -d --build
+```
+
+- **Frontend**: `http://localhost` (port 80)
+- **Backend API**: `http://localhost:8000/api/`
+- **Django Admin**: `http://localhost/admin/`
+
+The Django superuser is created automatically on first startup from the values in `.env`.
 
 ## Local Development
 
-To run locally for development:
+To run the frontend in isolation against a live backend:
 
 ```bash
 cd sunday-orders-app/frontend
@@ -85,11 +86,9 @@ frontend/
 
 ## Backend Integration
 
-The frontend communicates with the Django REST API backend deployed at:
-- **Primary**: `https://ppt.giftoria.cc/api/`
-- **Secondary**: `https://www.ppt.giftoria.cc/api/`
+The frontend communicates with the Django REST API via relative `/api/` paths. Nginx (running in the `frontend` container) proxies those requests to the `backend` container on port 8000 — no hardcoded domains or CORS configuration required.
 
-All API calls are made using the Fetch API with proper error handling and CORS support.
+All API calls are made using the Fetch API with proper error handling.
 
 ## Browser Support
 

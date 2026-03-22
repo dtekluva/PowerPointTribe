@@ -5,9 +5,7 @@ let stockData = [];
 let activeOrder = null;
 let customerOrders = [];
 
-// Environment detection
-const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_BASE_URL = isDevelopment ? 'http://127.0.0.1:8000/api' : 'https://ppt.giftoria.cc/api';
+const API_BASE_URL = '/api';
 
 // DOM elements
 const loadingScreen = document.getElementById('loading-screen');

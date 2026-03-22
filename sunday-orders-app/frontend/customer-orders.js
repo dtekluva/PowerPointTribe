@@ -1,8 +1,5 @@
 // Configuration
-const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_BASE_URL = isDevelopment
-    ? 'http://127.0.0.1:8000/api'  // Local development
-    : 'https://ppt.giftoria.cc/api'; // Production
+const API_BASE_URL = '/api';
 
 // Global state
 let allOrders = [];

@@ -1,0 +1,7 @@
+*.md
+netlify.toml
+deploy.sh
+update-cors.sh
+package.json
+test-*.html
+
