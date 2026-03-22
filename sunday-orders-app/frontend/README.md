@@ -43,6 +43,62 @@ The same username and password are used to log into the frontend CRM and the Dja
 
 Credentials are stored in `sunday-orders-app/.env` (excluded from version control). See `.env.sample` for the template.
 
+## Docker Installation
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) (Engine 20+)
+- [Docker Compose](https://docs.docker.com/compose/install/) (V2, bundled with Docker Desktop)
+
+### Step 1 — Clone the repository
+
+```bash
+git clone https://github.com/your-org/your-repo.git
+cd your-repo
+```
+
+### Step 2 — Create the `.env` file
+
+```bash
+cd sunday-orders-app
+cp .env.sample .env
+```
+
+> The default values in `.env.sample` work out of the box for local use — no edits required.
+
+### Step 3 — Build and start all services
+
+```bash
+docker compose up -d --build
+```
+
+This builds the backend and frontend images, starts PostgreSQL, runs database migrations, and creates the superuser automatically.
+
+### Step 4 — Verify the containers are running
+
+```bash
+docker compose ps
+```
+
+All three services (`db`, `backend`, `frontend`) should show **running**.
+
+### Step 5 — Access the application
+
+| Service       | URL                            |
+|---------------|--------------------------------|
+| Frontend      | `http://localhost`             |
+| Django Admin  | `http://localhost/admin/`      |
+
+Log in with the default credentials: **`admin`** / **`PPT@2024`**
+
+### Step 6 — Stop the stack
+
+```bash
+docker compose down
+```
+
+---
+
 ## Docker Deployment
 
 ```bash

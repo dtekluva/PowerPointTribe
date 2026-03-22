@@ -97,12 +97,12 @@ The API will be available at `http://127.0.0.1:8000/api/`
    ```bash
    python -m http.server 3000
    ```
-   
+
    Or use any static file server:
    ```bash
    # Using Node.js
    npx serve -p 3000
-   
+
    # Using PHP
    php -S localhost:3000
    ```
@@ -111,6 +111,64 @@ The API will be available at `http://127.0.0.1:8000/api/`
    ```
    http://localhost:3000
    ```
+
+## Docker Installation
+
+This is the recommended way to run the full stack locally.
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) (Engine 20+)
+- [Docker Compose](https://docs.docker.com/compose/install/) (V2, bundled with Docker Desktop)
+
+### Step 1 — Clone the repository
+
+```bash
+git clone https://github.com/your-org/your-repo.git
+cd your-repo
+```
+
+### Step 2 — Create the `.env` file
+
+```bash
+cd sunday-orders-app
+cp .env.sample .env
+```
+
+> The default values in `.env.sample` work out of the box for local use — no edits required.
+
+### Step 3 — Build and start all services
+
+```bash
+docker compose up -d --build
+```
+
+This builds the backend and frontend images, starts PostgreSQL, runs database migrations, and creates the Django superuser automatically.
+
+### Step 4 — Verify the containers are running
+
+```bash
+docker compose ps
+```
+
+All three services (`db`, `backend`, `frontend`) should show **running**.
+
+### Step 5 — Access the application
+
+| Service      | URL                       |
+|--------------|---------------------------|
+| Frontend     | `http://localhost`        |
+| Django Admin | `http://localhost/admin/` |
+
+Log in with the default credentials: **`admin`** / **`PPT@2024`**
+
+### Step 6 — Stop the stack
+
+```bash
+docker compose down
+```
+
+---
 
 ## Deployment
 
@@ -179,7 +237,7 @@ const API_BASE_URL = 'https://your-backend-domain.com/api';
 ## Sample Data
 
 The `populate_data.py` script creates:
-- 3 sample customers (Chinonso, Mrs. Abolarins, The Oladunjoyes)
+- 3 sample customers (Azubuike, Mrs. Kunles, The Ogunda's)
 - 5 sample products (Sugar Donuts, Sausage Roll, etc.)
 - 4 weeks of sample orders
 - 3 sample debt records
